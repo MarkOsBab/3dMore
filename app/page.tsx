@@ -2,6 +2,8 @@ import { getProducts } from "@/lib/actions";
 import ProductCard from "@/components/ProductCard";
 import { ArrowRight } from "lucide-react";
 
+type Product = Awaited<ReturnType<typeof getProducts>>[number];
+
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
@@ -71,9 +73,9 @@ export default async function Home() {
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "2rem" }}>
-              {products.map((product, index) => (
+              {products.map((product: Product, index) => (
                 <div key={product.id} style={{ animationDelay: `${0.1 * index}s` }} className="animate-fade-in-up">
-                  <ProductCard product={product as any} />
+                  <ProductCard product={product} />
                 </div>
               ))}
             </div>
