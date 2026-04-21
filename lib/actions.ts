@@ -90,6 +90,23 @@ export async function deleteVariant(id: string, productId: string) {
   revalidatePath("/admin/products");
 }
 
+export async function updateVariant(
+  id: string,
+  productId: string,
+  data: {
+    colorName?: string;
+    imageUrl?: string;
+    price?: number | null;
+    isOffer?: boolean;
+    discountPct?: number;
+  }
+) {
+  const variant = await prisma.productVariant.update({ where: { id }, data });
+  revalidatePath(`/products/${productId}`);
+  revalidatePath("/admin/products");
+  return variant;
+}
+
 // ─── PROMO CODES ──────────────────────────────────────────────────────────────
 
 export async function getPromoCodes() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Trash2, Plus, Layers } from "lucide-react";
+import { Trash2, Plus, Layers, Package, Pencil } from "lucide-react";
 import { deleteProduct, updateProduct } from "@/lib/actions";
 import ProductForm from "@/components/admin/ProductForm";
 import VariantForm from "@/components/admin/VariantForm";
@@ -33,6 +33,7 @@ interface Props { initialProducts: Product[] }
 export default function ProductsClient({ initialProducts }: Props) {
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showCreate, setShowCreate] = useState(false);
+  const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [variantTarget, setVariantTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -59,50 +60,152 @@ export default function ProductsClient({ initialProducts }: Props) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Productos</h1>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
+            <Package size={20} color="var(--accent-blue)" />
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>Productos</h1>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>
+            {products.length} producto{products.length !== 1 ? "s" : ""} en catálogo
+          </p>
+        </div>
         <button onClick={() => setShowCreate(true)} style={primaryBtnStyle}>
           <Plus size={18} /> Nuevo Producto
         </button>
       </div>
 
       {products.length === 0 && (
-        <div style={{ textAlign: "center", padding: "4rem", color: "var(--text-secondary)" }}>
-          No hay productos aún. ¡Crea el primero!
+        <div
+          className="glass"
+          style={{
+            textAlign: "center",
+            padding: "4rem",
+            borderRadius: "var(--radius-xl)",
+            color: "var(--text-secondary)",
+            border: "1px dashed rgba(255,255,255,0.1)",
+          }}
+        >
+          <Package size={40} color="var(--text-muted)" style={{ margin: "0 auto 1rem" }} />
+          <p style={{ fontWeight: 500 }}>Sin productos todavía</p>
+          <p style={{ fontSize: "0.85rem", marginTop: 4 }}>Creá el primero con el botón de arriba.</p>
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        {products.map((p) => (
-          <div key={p.id} className="glass" style={{ borderRadius: "12px", padding: "1.25rem", display: "flex", alignItems: "center", gap: "1.25rem", opacity: p.isActive ? 1 : 0.5 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+        {products.map((p, i) => (
+          <div
+            key={p.id}
+            className="glass admin-product-row admin-row-in"
+            style={{
+              borderRadius: "var(--radius-xl)",
+              padding: "1rem 1.25rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "1.25rem",
+              opacity: p.isActive ? 1 : 0.45,
+              animationDelay: `${i * 0.04}s`,
+            }}
+          >
             {p.thumbnail
-              ? <img src={p.thumbnail} alt={p.name} style={{ width: "64px", height: "64px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
-              : <div style={{ width: "64px", height: "64px", borderRadius: "8px", background: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)", fontSize: "0.75rem", flexShrink: 0 }}>Sin img</div>
+              ? <img src={p.thumbnail} alt={p.name} style={{ width: "60px", height: "60px", borderRadius: "var(--radius-md)", objectFit: "cover", flexShrink: 0 }} />
+              : (
+                <div
+                  style={{
+                    width: "60px", height: "60px", borderRadius: "var(--radius-md)",
+                    background: "var(--surface-2)", display: "flex", alignItems: "center",
+                    justifyContent: "center", color: "var(--text-muted)", flexShrink: 0,
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <Package size={20} />
+                </div>
+              )
             }
 
             <div style={{ flexGrow: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.25rem", flexWrap: "wrap" }}>
-                <h3 style={{ fontWeight: 600 }}>{p.name}</h3>
-                <span style={{ fontSize: "0.75rem", padding: "2px 8px", borderRadius: "99px", background: "rgba(255,255,255,0.08)", color: "var(--text-secondary)" }}>{p.category}</span>
-                {p.isOffer && <span style={{ fontSize: "0.75rem", padding: "2px 8px", borderRadius: "99px", background: "rgba(255,42,133,0.2)", color: "var(--accent-pink)" }}>{p.discountPct}% OFF</span>}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.2rem", flexWrap: "wrap" }}>
+                <h3 style={{ fontWeight: 600, fontSize: "0.95rem" }}>{p.name}</h3>
+                <span
+                  style={{
+                    fontSize: "0.7rem", padding: "2px 7px", borderRadius: "99px",
+                    background: "var(--surface-2)", color: "var(--text-secondary)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                  }}
+                >
+                  {p.category}
+                </span>
+                {p.isOffer && (
+                  <span
+                    style={{
+                      fontSize: "0.7rem", padding: "2px 7px", borderRadius: "99px",
+                      background: "rgba(255,42,133,0.15)", color: "var(--accent-pink)",
+                      border: "1px solid rgba(255,42,133,0.25)",
+                    }}
+                  >
+                    {p.discountPct}% OFF
+                  </span>
+                )}
               </div>
-              <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>
-                ${p.price} UYU — {p.variants.length} variante(s)
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.82rem" }}>
+                <span style={{ fontFamily: "var(--font-mono)" }}>${p.price} UYU</span>
+                <span style={{ margin: "0 0.4rem", opacity: 0.4 }}>·</span>
+                {p.variants.length} variante{p.variants.length !== 1 ? "s" : ""}
               </p>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.85rem" }}>
-                <div onClick={() => handleToggleActive(p)} style={{ width: "40px", height: "22px", borderRadius: "99px", background: p.isActive ? "var(--accent-blue)" : "rgba(255,255,255,0.15)", position: "relative", transition: "background 0.2s", cursor: "pointer" }}>
-                  <div style={{ position: "absolute", top: "3px", left: p.isActive ? "21px" : "3px", width: "16px", height: "16px", borderRadius: "50%", background: "white", transition: "left 0.2s" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexShrink: 0 }}>
+              {/* Toggle activo */}
+              <label
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}
+                title={p.isActive ? "Publicado" : "Oculto"}
+              >
+                <div
+                  onClick={() => handleToggleActive(p)}
+                  style={{
+                    width: "38px", height: "20px", borderRadius: "99px",
+                    background: p.isActive ? "var(--accent-blue)" : "rgba(255,255,255,0.12)",
+                    position: "relative", transition: "background 0.25s", cursor: "pointer",
+                    boxShadow: p.isActive ? "0 0 8px rgba(59,130,246,0.4)" : "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute", top: "2px",
+                      left: p.isActive ? "20px" : "2px",
+                      width: "16px", height: "16px",
+                      borderRadius: "50%", background: "white",
+                      transition: "left 0.22s cubic-bezier(0.34,1.56,0.64,1)",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.3)",
+                    }}
+                  />
                 </div>
-                {p.isActive ? "Activo" : "Oculto"}
+                <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+                  {p.isActive ? "Activo" : "Oculto"}
+                </span>
               </label>
 
-              <button title="Gestionar variantes" onClick={() => setVariantTarget(p)} style={iconBtnStyle}>
-                <Layers size={18} />
+              <button
+                title="Editar producto"
+                onClick={() => setEditTarget(p)}
+                className="admin-icon-btn"
+              >
+                <Pencil size={16} />
               </button>
-              <button title="Eliminar" disabled={deleting === p.id} onClick={() => handleDelete(p.id)} style={{ ...iconBtnStyle, color: "#ef4444" }}>
-                <Trash2 size={18} />
+              <button
+                title="Gestionar variantes"
+                onClick={() => setVariantTarget(p)}
+                className="admin-icon-btn"
+              >
+                <Layers size={16} />
+              </button>
+              <button
+                title="Eliminar producto"
+                disabled={deleting === p.id}
+                onClick={() => handleDelete(p.id)}
+                className="admin-icon-btn danger"
+                style={{ opacity: deleting === p.id ? 0.5 : 1 }}
+              >
+                <Trash2 size={16} />
               </button>
             </div>
           </div>
@@ -110,11 +213,19 @@ export default function ProductsClient({ initialProducts }: Props) {
       </div>
 
       {showCreate && (
-        <ProductForm onClose={() => setShowCreate(false)} onCreated={refresh} />
+        <ProductForm onClose={() => setShowCreate(false)} onSaved={refresh} />
+      )}
+      {editTarget && (
+        <ProductForm
+          initialProduct={editTarget}
+          onClose={() => setEditTarget(null)}
+          onSaved={() => { setEditTarget(null); refresh(); }}
+        />
       )}
       {variantTarget && (
         <VariantForm
           productId={variantTarget.id}
+          productName={variantTarget.name}
           productPrice={variantTarget.price}
           variants={variantTarget.variants}
           onClose={() => setVariantTarget(null)}
@@ -125,5 +236,17 @@ export default function ProductsClient({ initialProducts }: Props) {
   );
 }
 
-const primaryBtnStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 1.25rem", borderRadius: "8px", fontWeight: 600, cursor: "pointer", background: "linear-gradient(135deg, #ff2a85, #3b82f6)", border: "none", color: "white" };
-const iconBtnStyle: React.CSSProperties = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "0.5rem", color: "white", cursor: "pointer", display: "flex", alignItems: "center" };
+const primaryBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.5rem",
+  padding: "0.65rem 1.25rem",
+  borderRadius: "var(--radius-pill)",
+  fontWeight: 600,
+  cursor: "pointer",
+  background: "var(--accent-neon)",
+  border: "none",
+  color: "white",
+  boxShadow: "var(--shadow-cta-pink)",
+  fontSize: "0.9rem",
+};

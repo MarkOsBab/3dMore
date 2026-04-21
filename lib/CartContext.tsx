@@ -39,6 +39,7 @@ interface CartContextProps {
   promoDiscount: number;
   applyPromo: (code: string) => Promise<{ valid: boolean; message: string }>;
   removePromo: () => void;
+  lastAdded: CartProduct | null;
 }
 
 const CartContext = createContext<CartContextProps>({} as CartContextProps);
@@ -48,6 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState(0);
+  const [lastAdded, setLastAdded] = useState<CartProduct | null>(null);
 
   useEffect(() => {
     try {
@@ -84,9 +86,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { ...product, quantity: 1 }];
     });
-    setIsCartOpen(true);
+    setLastAdded(product);
   };
-
+2
   const removeFromCart = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };
@@ -132,7 +134,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CartContext.Provider value={{ items, addToCart, removeFromCart, clearCart, isCartOpen, setIsCartOpen, subtotal, total, promoCode, promoDiscount, applyPromo, removePromo }}>
+    <CartContext.Provider value={{ items, addToCart, removeFromCart, clearCart, isCartOpen, setIsCartOpen, subtotal, total, promoCode, promoDiscount, applyPromo, removePromo, lastAdded }}>
       {children}
     </CartContext.Provider>
   );

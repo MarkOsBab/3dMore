@@ -44,3 +44,26 @@ model PromoCode {
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
 }
+
+model Order {
+  id                String      @id @default(cuid())
+  mpPaymentId       String?     @unique
+  mpExternalRef     String      @unique
+  status            OrderStatus @default(PENDING)
+  items             Json        // Array de CartItem serializado
+  subtotal          Float
+  total             Float
+  promoCode         String?
+  promoDiscount     Float       @default(0)
+  payerEmail        String?
+  payerName         String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}

@@ -3,6 +3,7 @@ import { Outfit } from "next/font/google";
 import "./globals.css";
 import Navbar from "../components/Navbar";
 import CartModal from "../components/CartModal";
+import CartToast from "../components/CartToast";
 import { CartProvider } from "../lib/CartContext";
 
 const outfit = Outfit({
@@ -27,6 +28,7 @@ export default function RootLayout({
           <Navbar />
           {children}
           <CartModal />
+          <CartToast />
         </CartProvider>
       </body>
     </html>

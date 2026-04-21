@@ -2,18 +2,26 @@
 
 import { useState } from "react";
 import { createPromoCode, togglePromoCode, deletePromoCode } from "@/lib/actions";
-import { Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Plus, Trash2, Copy, Check, Tag } from "lucide-react";
 
 interface PromoCode {
-  id: string; code: string; discountPct: number; isActive: boolean;
-  usageLimit: number | null; timesUsed: number; validUntil: Date | null;
+  id: string;
+  code: string;
+  discountPct: number;
+  isActive: boolean;
+  usageLimit: number | null;
+  timesUsed: number;
+  validUntil: Date | null;
 }
-interface Props { initialPromos: PromoCode[] }
+interface Props {
+  initialPromos: PromoCode[];
+}
 
 export default function PromosClient({ initialPromos }: Props) {
   const [promos, setPromos] = useState<PromoCode[]>(initialPromos);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: "", discountPct: "10", validUntil: "", usageLimit: "100" });
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -37,7 +45,9 @@ export default function PromosClient({ initialPromos }: Props) {
 
   const handleToggle = async (p: PromoCode) => {
     await togglePromoCode(p.id, !p.isActive);
-    setPromos((prev) => prev.map((x) => x.id === p.id ? { ...x, isActive: !x.isActive } : x));
+    setPromos((prev) =>
+      prev.map((x) => (x.id === p.id ? { ...x, isActive: !x.isActive } : x))
+    );
   };
 
   const handleDelete = async (id: string) => {
@@ -46,10 +56,31 @@ export default function PromosClient({ initialPromos }: Props) {
     setPromos((p) => p.filter((x) => x.id !== id));
   };
 
+  const copyCode = (id: string, code: string) => {
+    navigator.clipboard?.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1200);
+  };
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Códigos Promocionales</h1>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "2rem",
+        }}
+      >
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
+            <Tag size={20} color="var(--accent-pink)" />
+            <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>Códigos Promocionales</h1>
+          </div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem" }}>
+            {promos.filter((p) => p.isActive).length} activo{promos.filter((p) => p.isActive).length !== 1 ? "s" : ""} · {promos.length} en total
+          </p>
+        </div>
         <button onClick={() => setShowForm(!showForm)} style={primaryBtnStyle}>
           <Plus size={18} /> Nuevo Código
         </button>
@@ -57,85 +88,308 @@ export default function PromosClient({ initialPromos }: Props) {
 
       {/* Create form */}
       {showForm && (
-        <div className="glass" style={{ borderRadius: "12px", padding: "1.5rem", marginBottom: "2rem", borderLeft: "3px solid var(--accent-pink)" }}>
-          <h3 style={{ marginBottom: "1.5rem", fontWeight: 600 }}>Crear Código de Descuento</h3>
-          <form onSubmit={handleCreate} style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1rem", alignItems: "end" }}>
+        <div
+          className="glass admin-slide-down"
+          style={{
+            borderRadius: "var(--radius-xl)",
+            padding: "1.5rem",
+            marginBottom: "1.5rem",
+            borderTop: "2px solid var(--accent-pink)",
+          }}
+        >
+          <h3 style={{ marginBottom: "1.25rem", fontWeight: 600, fontSize: "1rem" }}>
+            Crear código de descuento
+          </h3>
+          <form
+            onSubmit={handleCreate}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr 1fr",
+              gap: "1rem",
+              alignItems: "end",
+            }}
+          >
             <div>
               <label style={labelStyle}>Código</label>
-              <input style={inputStyle} placeholder="RIDER2026" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} required />
+              <input
+                style={{ ...inputStyle, fontFamily: "var(--font-mono)" }}
+                placeholder="RIDER2026"
+                value={form.code}
+                onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                required
+              />
             </div>
             <div>
               <label style={labelStyle}>% Descuento</label>
-              <input style={inputStyle} type="number" min="1" max="100" value={form.discountPct} onChange={(e) => setForm({ ...form, discountPct: e.target.value })} required />
+              <input
+                style={inputStyle}
+                type="number"
+                min="1"
+                max="100"
+                value={form.discountPct}
+                onChange={(e) => setForm({ ...form, discountPct: e.target.value })}
+                required
+              />
             </div>
             <div>
               <label style={labelStyle}>Vence (opcional)</label>
-              <input style={inputStyle} type="date" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} />
+              <input
+                style={inputStyle}
+                type="date"
+                value={form.validUntil}
+                onChange={(e) => setForm({ ...form, validUntil: e.target.value })}
+              />
             </div>
             <div>
               <label style={labelStyle}>Límite de usos</label>
-              <input style={inputStyle} type="number" min="1" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: e.target.value })} />
+              <input
+                style={inputStyle}
+                type="number"
+                min="1"
+                value={form.usageLimit}
+                onChange={(e) => setForm({ ...form, usageLimit: e.target.value })}
+              />
             </div>
-            <div style={{ gridColumn: "1 / -1", display: "flex", gap: "1rem" }}>
-              <button type="button" onClick={() => setShowForm(false)} style={secondaryBtnStyle}>Cancelar</button>
-              <button type="submit" disabled={loading} style={{ ...primaryBtnStyle, opacity: loading ? 0.7 : 1 }}>
-                {loading ? "Creando..." : "Crear Código"}
+            <div style={{ gridColumn: "1 / -1", display: "flex", gap: "0.75rem" }}>
+              <button type="button" onClick={() => setShowForm(false)} style={secondaryBtnStyle}>
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{ ...primaryBtnStyle, opacity: loading ? 0.7 : 1 }}
+              >
+                {loading ? "Creando..." : "Crear código"}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Table */}
-      <div className="glass" style={{ borderRadius: "12px", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.95rem" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-              {["Código", "Descuento", "Usos", "Vencimiento", "Estado", ""].map((h) => (
-                <th key={h} style={{ padding: "1rem 1.25rem", textAlign: "left", color: "var(--text-secondary)", fontWeight: 600, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {promos.length === 0 && (
-              <tr><td colSpan={6} style={{ padding: "3rem", textAlign: "center", color: "var(--text-secondary)" }}>Sin códigos promocionales aún.</td></tr>
-            )}
-            {promos.map((p) => (
-              <tr key={p.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", opacity: p.isActive ? 1 : 0.5 }}>
-                <td style={{ padding: "1rem 1.25rem" }}>
-                  <code style={{ background: "rgba(255,255,255,0.08)", padding: "3px 10px", borderRadius: "6px", fontFamily: "monospace", fontWeight: 700, color: "var(--accent-pink)" }}>{p.code}</code>
-                </td>
-                <td style={{ padding: "1rem 1.25rem", fontWeight: 600 }}>{p.discountPct}%</td>
-                <td style={{ padding: "1rem 1.25rem", color: "var(--text-secondary)" }}>{p.timesUsed} / {p.usageLimit ?? "∞"}</td>
-                <td style={{ padding: "1rem 1.25rem", color: "var(--text-secondary)" }}>
-                  {p.validUntil ? new Date(p.validUntil).toLocaleDateString("es-UY") : "Sin límite"}
-                </td>
-                <td style={{ padding: "1rem 1.25rem" }}>
-                  <span style={{ padding: "3px 10px", borderRadius: "99px", fontSize: "0.8rem", fontWeight: 600, background: p.isActive ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)", color: p.isActive ? "#22c55e" : "var(--text-secondary)" }}>
-                    {p.isActive ? "Activo" : "Inactivo"}
-                  </span>
-                </td>
-                <td style={{ padding: "1rem 1.25rem" }}>
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button title={p.isActive ? "Desactivar" : "Activar"} onClick={() => handleToggle(p)} style={iconBtnStyle}>
-                      {p.isActive ? <ToggleRight size={18} style={{ color: "#22c55e" }} /> : <ToggleLeft size={18} />}
-                    </button>
-                    <button title="Eliminar" onClick={() => handleDelete(p.id)} style={{ ...iconBtnStyle, color: "#ef4444" }}>
-                      <Trash2 size={18} />
+
+      {/* Card grid */}
+      {promos.length === 0 ? (
+        <div
+          className="glass"
+          style={{
+            padding: "4rem",
+            borderRadius: "var(--radius-xl)",
+            textAlign: "center",
+            color: "var(--text-secondary)",
+            border: "1px dashed rgba(255,255,255,0.1)",
+          }}
+        >
+          <Tag size={40} color="var(--text-muted)" style={{ margin: "0 auto 1rem" }} />
+          <p style={{ fontWeight: 500 }}>Sin códigos promocionales</p>
+          <p style={{ fontSize: "0.85rem", marginTop: 4 }}>Creá el primero con el botón de arriba.</p>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: "0.85rem",
+          }}
+        >
+          {promos.map((p, i) => {
+            const maxUses = p.usageLimit ?? 0;
+            const pct = maxUses > 0 ? Math.min(100, (p.timesUsed / maxUses) * 100) : 0;
+            const expired = p.validUntil ? new Date(p.validUntil) < new Date() : false;
+            return (
+              <div
+                key={p.id}
+                className="glass admin-promo-card admin-row-in"
+                style={{
+                  borderRadius: "var(--radius-xl)",
+                  padding: "1.25rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.85rem",
+                  borderTop: p.isActive ? "2px solid var(--accent-pink)" : "2px solid rgba(255,255,255,0.06)",
+                  opacity: p.isActive ? 1 : 0.5,
+                  animationDelay: `${i * 0.04}s`,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div
+                      className="text-gradient"
+                      style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: "1.1rem" }}
+                    >
+                      {p.code}
+                    </div>
+                    <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                      {p.discountPct}% de descuento
+                    </div>
+                  </div>
+                  <button
+                    aria-label="Copiar código"
+                    onClick={() => copyCode(p.id, p.code)}
+                    style={{
+                      background: "var(--surface-2)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: copiedId === p.id ? "var(--success)" : "var(--text-secondary)",
+                      padding: 6,
+                      borderRadius: "var(--radius-sm)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {copiedId === p.id ? <Check size={14} /> : <Copy size={14} />}
+                  </button>
+                </div>
+
+                {maxUses > 0 && (
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "0.78rem",
+                        color: "var(--text-secondary)",
+                        marginBottom: 4,
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      <span>
+                        {p.timesUsed} / {p.usageLimit} usos
+                      </span>
+                      <span>{pct.toFixed(0)}%</span>
+                    </div>
+                      <div
+                        style={{
+                          height: 5,
+                          background: "var(--surface-2)",
+                          borderRadius: 3,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          className="admin-progress-bar"
+                          style={{
+                            width: `${pct}%`,
+                            height: "100%",
+                            background: pct > 80 ? "var(--danger)" : "var(--accent-neon)",
+                            borderRadius: 3,
+                          }}
+                        />
+                      </div>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingTop: 2,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "0.77rem",
+                      color: expired ? "var(--danger)" : "var(--text-secondary)",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
+                    {p.validUntil
+                      ? `vence ${new Date(p.validUntil).toLocaleDateString("es-UY")}`
+                      : "sin vencimiento"}
+                  </div>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <Toggle value={p.isActive} onToggle={() => handleToggle(p)} />
+                    <button
+                      aria-label="Eliminar"
+                      onClick={() => handleDelete(p.id)}
+                      style={{ background: "transparent", color: "var(--danger)", cursor: "pointer" }}
+                    >
+                      <Trash2 size={15} />
                     </button>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
-const inputStyle: React.CSSProperties = { backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "0.6rem 0.9rem", color: "white", width: "100%", fontSize: "0.95rem", outline: "none" };
-const labelStyle: React.CSSProperties = { fontSize: "0.85rem", color: "var(--text-secondary)", display: "block", marginBottom: "0.4rem" };
-const primaryBtnStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.65rem 1.25rem", borderRadius: "8px", fontWeight: 600, cursor: "pointer", background: "linear-gradient(135deg, #ff2a85, #3b82f6)", border: "none", color: "white" };
-const secondaryBtnStyle: React.CSSProperties = { padding: "0.65rem 1.25rem", borderRadius: "8px", fontWeight: 600, cursor: "pointer", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "white" };
-const iconBtnStyle: React.CSSProperties = { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "0.4rem 0.5rem", color: "white", cursor: "pointer", display: "flex", alignItems: "center" };
+function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-pressed={value}
+      aria-label={value ? "Desactivar" : "Activar"}
+      style={{
+        width: 36,
+        height: 20,
+        borderRadius: 10,
+        position: "relative",
+        background: value ? "var(--accent-neon)" : "var(--surface-3)",
+        border: "none",
+        cursor: "pointer",
+        transition: "background 0.2s",
+        padding: 0,
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 2,
+          left: value ? 18 : 2,
+          width: 16,
+          height: 16,
+          borderRadius: "50%",
+          background: "#fff",
+          transition: "left 0.2s",
+        }}
+      />
+    </button>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  backgroundColor: "var(--surface-2)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: "var(--radius-sm)",
+  padding: "0.6rem 0.9rem",
+  color: "white",
+  width: "100%",
+  fontSize: "0.95rem",
+  outline: "none",
+  fontFamily: "inherit",
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: "0.72rem",
+  color: "var(--text-secondary)",
+  display: "block",
+  marginBottom: "0.4rem",
+  textTransform: "uppercase",
+  letterSpacing: "1.5px",
+};
+
+const primaryBtnStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "0.5rem",
+  padding: "0.65rem 1.25rem",
+  borderRadius: "var(--radius-pill)",
+  fontWeight: 600,
+  cursor: "pointer",
+  background: "var(--accent-neon)",
+  border: "none",
+  color: "white",
+  boxShadow: "var(--shadow-cta-pink)",
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "0.65rem 1.25rem",
+  borderRadius: "var(--radius-pill)",
+  fontWeight: 600,
+  cursor: "pointer",
+  background: "var(--surface-3)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  color: "white",
+};

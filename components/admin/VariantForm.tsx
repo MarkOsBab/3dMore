@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createVariant, deleteVariant } from "@/lib/actions";
 import { ImageUploader } from "./ImageUploader";
-import { Trash2 } from "lucide-react";
+import { Trash2, Plus, Layers, X, Palette, Sparkles } from "lucide-react";
 
 interface Variant {
   id: string;
@@ -16,13 +16,14 @@ interface Variant {
 
 interface Props {
   productId: string;
+  productName: string;
   productPrice: number;
   variants: Variant[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function VariantForm({ productId, productPrice, variants, onClose, onSaved }: Props) {
+export default function VariantForm({ productId, productName, productPrice, variants, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
@@ -32,24 +33,29 @@ export default function VariantForm({ productId, productPrice, variants, onClose
   const [isOffer, setIsOffer] = useState(false);
   const [discountPct, setDiscountPct] = useState("0");
 
+  const resetForm = () => {
+    setColorName("");
+    setImageUrl("");
+    setUseCustomPrice(false);
+    setPrice("");
+    setIsOffer(false);
+    setDiscountPct("0");
+  };
+
   const handleAdd = async () => {
-    if (!colorName || !imageUrl) return alert("Completá el color e imagen");
+    if (!colorName.trim()) return alert("Ingresá el nombre del color");
+    if (!imageUrl) return alert("Subí una imagen para la variante");
     setLoading(true);
     try {
       await createVariant({
         productId,
-        colorName,
+        colorName: colorName.trim(),
         imageUrl,
         price: useCustomPrice && price ? parseFloat(price) : null,
         isOffer,
         discountPct: isOffer ? parseFloat(discountPct) || 0 : 0,
       });
-      setColorName("");
-      setImageUrl("");
-      setUseCustomPrice(false);
-      setPrice("");
-      setIsOffer(false);
-      setDiscountPct("0");
+      resetForm();
       onSaved();
     } finally {
       setLoading(false);
@@ -69,35 +75,71 @@ export default function VariantForm({ productId, productPrice, variants, onClose
 
   return (
     <div style={overlayStyle} onClick={onClose}>
-      <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-        <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: "1.5rem" }}>Variantes de Color</h2>
+      <div className="admin-modal-enter" style={modalStyle} onClick={(e) => e.stopPropagation()}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div style={iconBoxStyle}>
+              <Layers size={18} color="var(--accent-blue)" />
+            </div>
+            <div>
+              <h2 style={{ fontSize: "1.15rem", fontWeight: 700, lineHeight: 1.2 }}>Variantes de Color</h2>
+              <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 2 }}>{productName}</p>
+            </div>
+          </div>
+          <button onClick={onClose} style={closeButtonStyle}>
+            <X size={18} />
+          </button>
+        </div>
 
         {/* Existing variants */}
-        <div style={{ marginBottom: "2rem" }}>
-          <h3 style={{ color: "var(--text-secondary)", fontSize: "0.85rem", letterSpacing: "1px", marginBottom: "1rem" }}>VARIANTES EXISTENTES</h3>
+        <div style={{ marginBottom: "1.75rem" }}>
+          <SectionTitle icon={<Palette size={13} />} label={`Variantes existentes (${variants.length})`} />
           {variants.length === 0 ? (
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem" }}>Sin variantes aún.</p>
+            <div style={{ padding: "2rem", textAlign: "center", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.08)" }}>
+              <Layers size={28} color="var(--text-muted)" style={{ margin: "0 auto 0.6rem" }} />
+              <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
+                Sin variantes. Agregá la primera abajo.
+              </p>
+            </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {variants.map((v) => {
-                const effectivePrice = v.price ?? productPrice;
-                const displayPrice = v.isOffer && v.discountPct
-                  ? effectivePrice * (1 - v.discountPct / 100)
-                  : effectivePrice;
+                const base = v.price ?? productPrice;
+                const final = v.isOffer && v.discountPct ? base * (1 - v.discountPct / 100) : base;
                 return (
-                  <div key={v.id} style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem", borderRadius: "8px", background: "rgba(255,255,255,0.04)" }}>
-                    <img src={v.imageUrl} alt={v.colorName} style={{ width: "50px", height: "50px", borderRadius: "6px", objectFit: "cover", flexShrink: 0 }} />
-                    <div style={{ flexGrow: 1 }}>
-                      <p style={{ fontWeight: 600 }}>{v.colorName}</p>
-                      <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>
-                        {v.price != null ? `Precio propio: $${displayPrice.toFixed(0)} UYU` : `Precio del producto: $${productPrice.toFixed(0)} UYU`}
-                        {v.isOffer && v.discountPct ? ` — ${v.discountPct}% OFF` : ""}
+                  <div
+                    key={v.id}
+                    style={{
+                      display: "flex", alignItems: "center", gap: "0.75rem",
+                      padding: "0.75rem", borderRadius: 10,
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <img
+                      src={v.imageUrl}
+                      alt={v.colorName}
+                      style={{ width: 52, height: 52, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid rgba(255,255,255,0.08)" }}
+                    />
+                    <div style={{ flexGrow: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: "0.9rem" }}>{v.colorName}</p>
+                      <p style={{ fontSize: "0.77rem", color: "var(--text-secondary)", marginTop: 2, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontFamily: "var(--font-mono)" }}>${final.toFixed(0)} UYU</span>
+                        {v.price != null && <span style={{ opacity: 0.55 }}>· precio propio</span>}
+                        {v.isOffer && v.discountPct ? (
+                          <span style={{ background: "rgba(255,42,133,0.15)", color: "var(--accent-pink)", borderRadius: 4, padding: "1px 6px", fontSize: "0.7rem", fontWeight: 600 }}>
+                            {v.discountPct}% OFF
+                          </span>
+                        ) : null}
                       </p>
                     </div>
                     <button
                       onClick={() => handleDelete(v.id)}
                       disabled={deletingId === v.id}
-                      style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "6px", padding: "0.4rem", color: "#ef4444", cursor: "pointer", display: "flex", alignItems: "center" }}
+                      className="admin-icon-btn danger"
+                      style={{ opacity: deletingId === v.id ? 0.5 : 1 }}
                     >
                       <Trash2 size={15} />
                     </button>
@@ -109,76 +151,132 @@ export default function VariantForm({ productId, productPrice, variants, onClose
         </div>
 
         {/* Add new variant */}
-        <h3 style={{ color: "var(--text-secondary)", fontSize: "0.85rem", letterSpacing: "1px", marginBottom: "1rem" }}>AGREGAR VARIANTE</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div>
-            <label style={labelStyle}>Nombre del Color</label>
-            <input style={inputStyle} placeholder="Ej: Rojo Neón" value={colorName} onChange={(e) => setColorName(e.target.value)} />
-          </div>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem" }}>
+          <SectionTitle icon={<Plus size={13} />} label="Nueva variante" />
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
-          {/* Custom price toggle */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <div>
+                <label style={labelStyle}>Nombre del Color</label>
+                <input
+                  className="admin-input"
+                  placeholder="Ej: Rojo Neón"
+                  value={colorName}
+                  onChange={(e) => setColorName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Precio base del producto</label>
+                <input
+                  className="admin-input"
+                  value={`$${productPrice} UYU`}
+                  readOnly
+                  style={{ opacity: 0.45, cursor: "default" }}
+                />
+              </div>
+            </div>
+
+            {/* Precio custom */}
+            <label style={{
+              display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer",
+              padding: "0.65rem 0.85rem", borderRadius: 8,
+              background: useCustomPrice ? "rgba(59,130,246,0.07)" : "rgba(255,255,255,0.02)",
+              border: `1px solid ${useCustomPrice ? "rgba(59,130,246,0.22)" : "rgba(255,255,255,0.06)"}`,
+              transition: "all 0.2s",
+            }}>
               <input
                 type="checkbox"
-                id="useCustomPrice"
                 checked={useCustomPrice}
                 onChange={(e) => setUseCustomPrice(e.target.checked)}
-                style={{ width: "16px", height: "16px", accentColor: "var(--accent-pink)" }}
+                style={{ width: 16, height: 16, accentColor: "var(--accent-blue)", flexShrink: 0 }}
               />
-              <label htmlFor="useCustomPrice" style={{ cursor: "pointer", fontSize: "0.9rem" }}>
-                Precio distinto al del producto <span style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>(base: ${productPrice} UYU)</span>
-              </label>
-            </div>
+              <span style={{ fontSize: "0.88rem" }}>Precio distinto para esta variante</span>
+            </label>
             {useCustomPrice && (
-              <input
-                style={inputStyle}
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Precio (UYU)"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
+              <div>
+                <label style={labelStyle}>Precio (UYU)</label>
+                <div style={{ position: "relative" }}>
+                  <span style={{ position: "absolute", left: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-secondary)", fontSize: "0.85rem", pointerEvents: "none" }}>$</span>
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    style={{ paddingLeft: "1.6rem" }}
+                  />
+                </div>
+              </div>
             )}
-          </div>
 
-          {/* Offer */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            {/* Oferta */}
+            <label style={{
+              display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer",
+              padding: "0.65rem 0.85rem", borderRadius: 8,
+              background: isOffer ? "rgba(255,42,133,0.07)" : "rgba(255,255,255,0.02)",
+              border: `1px solid ${isOffer ? "rgba(255,42,133,0.22)" : "rgba(255,255,255,0.06)"}`,
+              transition: "all 0.2s",
+            }}>
               <input
                 type="checkbox"
-                id="variantIsOffer"
                 checked={isOffer}
                 onChange={(e) => setIsOffer(e.target.checked)}
-                style={{ width: "16px", height: "16px", accentColor: "var(--accent-pink)" }}
+                style={{ width: 16, height: 16, accentColor: "var(--accent-pink)", flexShrink: 0 }}
               />
-              <label htmlFor="variantIsOffer" style={{ cursor: "pointer", fontSize: "0.9rem" }}>Esta variante tiene descuento</label>
-            </div>
+              <span style={{ fontSize: "0.88rem" }}>Esta variante tiene descuento</span>
+              {isOffer && <Sparkles size={14} color="var(--accent-pink)" style={{ marginLeft: "auto" }} />}
+            </label>
             {isOffer && (
-              <input
-                style={inputStyle}
-                type="number"
-                min="0"
-                max="100"
-                placeholder="% de descuento"
-                value={discountPct}
-                onChange={(e) => setDiscountPct(e.target.value)}
-              />
+              <div>
+                <label style={labelStyle}>% de descuento</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    className="admin-input"
+                    type="number"
+                    min="1"
+                    max="99"
+                    placeholder="20"
+                    value={discountPct}
+                    onChange={(e) => setDiscountPct(e.target.value)}
+                    style={{ paddingRight: "2.5rem" }}
+                  />
+                  <span style={{ position: "absolute", right: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-secondary)" }}>%</span>
+                </div>
+              </div>
             )}
-          </div>
 
-          <div>
-            <label style={labelStyle}>Foto de esta variante</label>
-            <ImageUploader onUploaded={setImageUrl} />
-            {imageUrl && <img src={imageUrl} alt="preview" style={{ marginTop: "0.5rem", maxHeight: "100px", borderRadius: "8px", objectFit: "cover" }} />}
-          </div>
+            {/* Imagen */}
+            <div>
+              <label style={labelStyle}>Foto de la variante</label>
+              <ImageUploader onUploaded={setImageUrl} />
+              {imageUrl && (
+                <div style={{ marginTop: "0.6rem", display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <img src={imageUrl} alt="preview" style={{ height: 72, borderRadius: 8, objectFit: "cover", border: "1px solid rgba(255,255,255,0.1)" }} />
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("")}
+                    style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: "0.8rem" }}
+                  >
+                    <X size={13} /> Quitar
+                  </button>
+                </div>
+              )}
+            </div>
 
-          <div style={{ display: "flex", gap: "1rem" }}>
-            <button onClick={onClose} style={secondaryBtnStyle}>Cerrar</button>
-            <button onClick={handleAdd} disabled={loading} style={{ ...primaryBtnStyle, opacity: loading ? 0.7 : 1 }}>
-              {loading ? "Guardando..." : "Agregar Variante"}
-            </button>
+            <div style={{ display: "flex", gap: "0.75rem", paddingTop: "0.25rem" }}>
+              <button type="button" onClick={onClose} style={secondaryBtnStyle}>Cerrar</button>
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={loading}
+                style={{ ...primaryBtnStyle, opacity: loading ? 0.65 : 1 }}
+              >
+                <Plus size={16} />
+                {loading ? "Guardando…" : "Agregar Variante"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -186,9 +284,52 @@ export default function VariantForm({ productId, productPrice, variants, onClose
   );
 }
 
-const overlayStyle: React.CSSProperties = { position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" };
-const modalStyle: React.CSSProperties = { backgroundColor: "#151520", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "2rem", width: "100%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" };
-const inputStyle: React.CSSProperties = { backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "0.6rem 0.9rem", color: "white", width: "100%", fontSize: "0.95rem", outline: "none" };
-const labelStyle: React.CSSProperties = { fontSize: "0.85rem", color: "var(--text-secondary)", display: "block", marginBottom: "0.4rem" };
-const primaryBtnStyle: React.CSSProperties = { flex: 1, padding: "0.75rem", borderRadius: "8px", fontWeight: 600, cursor: "pointer", background: "linear-gradient(135deg, #ff2a85, #3b82f6)", border: "none", color: "white" };
-const secondaryBtnStyle: React.CSSProperties = { padding: "0.75rem 1.5rem", borderRadius: "8px", fontWeight: 600, cursor: "pointer", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", color: "white" };
+function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.75rem" }}>
+      <span style={{ color: "var(--accent-pink)", display: "flex" }}>{icon}</span>
+      <span style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "1.2px", textTransform: "uppercase" as const, color: "var(--text-secondary)" }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+const overlayStyle: React.CSSProperties = {
+  position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.82)",
+  backdropFilter: "blur(6px)", zIndex: 200,
+  display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem",
+};
+const modalStyle: React.CSSProperties = {
+  backgroundColor: "#13131e",
+  border: "1px solid rgba(255,255,255,0.09)",
+  borderRadius: "var(--radius-xl)",
+  padding: "2rem",
+  width: "100%", maxWidth: "580px", maxHeight: "90vh", overflowY: "auto",
+};
+const iconBoxStyle: React.CSSProperties = {
+  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+  background: "linear-gradient(135deg, rgba(59,130,246,0.18), rgba(255,42,133,0.18))",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  border: "1px solid rgba(59,130,246,0.22)",
+};
+const closeButtonStyle: React.CSSProperties = {
+  background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+  borderRadius: "8px", padding: "0.4rem", color: "var(--text-secondary)",
+  cursor: "pointer", display: "flex",
+};
+const labelStyle: React.CSSProperties = {
+  fontSize: "0.8rem", color: "var(--text-secondary)", fontWeight: 500,
+  display: "block", marginBottom: "0.35rem",
+};
+const primaryBtnStyle: React.CSSProperties = {
+  flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.4rem",
+  padding: "0.75rem", borderRadius: "var(--radius-md)", fontWeight: 600,
+  cursor: "pointer", background: "linear-gradient(135deg, #ff2a85, #3b82f6)",
+  border: "none", color: "white", fontSize: "0.95rem", transition: "opacity 0.2s",
+};
+const secondaryBtnStyle: React.CSSProperties = {
+  padding: "0.75rem 1.5rem", borderRadius: "var(--radius-md)", fontWeight: 600,
+  cursor: "pointer", background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-secondary)", fontSize: "0.95rem",
+};

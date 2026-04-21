@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useCart } from "@/lib/CartContext";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Check } from "lucide-react";
 
 interface Product {
   id: string;
@@ -16,6 +17,7 @@ interface Product {
 
 export default function ClientAddToCart({ product }: { product: Product }) {
   const { addToCart } = useCart();
+  const [isAdded, setIsAdded] = useState(false);
 
   const cartProduct = {
     id: product.id,
@@ -39,11 +41,23 @@ export default function ClientAddToCart({ product }: { product: Product }) {
         fontSize: "1.1rem",
         width: "100%",
         justifyContent: "center",
+        background: isAdded ? "var(--success)" : undefined,
+        boxShadow: isAdded ? "0 0 22px rgba(34,197,94,0.5)" : undefined,
+        animation: isAdded ? "btn-added-pop 0.38s cubic-bezier(0.34,1.56,0.64,1)" : undefined,
+        transition: "background 0.3s ease, box-shadow 0.3s ease",
       }}
-      onClick={() => addToCart(cartProduct)}
+      onClick={() => {
+        if (isAdded) return;
+        addToCart(cartProduct);
+        setIsAdded(true);
+        setTimeout(() => setIsAdded(false), 1600);
+      }}
     >
-      <ShoppingCart size={22} />
-      AGREGAR AL CARRITO
+      {isAdded ? (
+        <><Check size={22} /> ¡AGREGADO!</>
+      ) : (
+        <><ShoppingCart size={22} /> AGREGAR AL CARRITO</>
+      )}
     </button>
   );
 }

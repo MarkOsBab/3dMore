@@ -1,46 +1,127 @@
+/* =========================================================================
+   3dMore — Design System tokens + global foundation
+   Paired with Outfit (from next/font in layout.tsx) + JetBrains Mono CDN.
+   ========================================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
+
 :root {
-  --bg-dark: #0a0a0f;
-  --bg-card: #151520;
-  --text-primary: #ffffff;
+  /* ── Backgrounds & surfaces ─────────────────────────────────────────── */
+  --bg-dark:        #0a0a0f;
+  --bg-card:        #151520;
+  --surface-1:      rgba(255, 255, 255, 0.03);
+  --surface-2:      rgba(255, 255, 255, 0.06);
+  --surface-3:      rgba(255, 255, 255, 0.10);
+  --surface-4:      rgba(255, 255, 255, 0.15);
+
+  /* ── Text tiers ─────────────────────────────────────────────────────── */
+  --text-primary:   #ffffff;
   --text-secondary: #a0a0b0;
-  --accent-pink: #ff2a85;
-  --accent-blue: #3b82f6;
-  --accent-neon: linear-gradient(135deg, #ff2a85 0%, #3b82f6 100%);
-  --glow-pink: rgba(255, 42, 133, 0.5);
-  --glow-blue: rgba(59, 130, 246, 0.5);
+  --text-muted:     #6b6b7a;
+
+  /* ── Brand accents ──────────────────────────────────────────────────── */
+  --accent-pink:    #ff2a85;
+  --accent-blue:    #3b82f6;
+  --accent-pink-soft: rgba(255, 42, 133, 0.15);
+  --accent-blue-soft: rgba(59, 130, 246, 0.15);
+
+  /* ── Gradient ───────────────────────────────────────────────────────── */
+  --accent-neon:    linear-gradient(135deg, #ff2a85 0%, #3b82f6 100%);
+  --gradient-primary: var(--accent-neon); /* alias */
+
+  /* ── Glow / shadow tokens (all colored — never neutral gray) ────────── */
+  --glow-pink:      rgba(255, 42, 133, 0.5);
+  --glow-blue:      rgba(59, 130, 246, 0.5);
+  --shadow-cta-pink:    0 0 15px rgba(255, 42, 133, 0.5);
+  --shadow-cta-pink-lg: 0 0 25px rgba(255, 42, 133, 0.5);
+  --shadow-cta-blue:    0 0 15px rgba(59, 130, 246, 0.5);
+  --shadow-card-hover:  0 10px 25px rgba(255, 42, 133, 0.2);
+  --shadow-drawer:      -10px 0 40px rgba(255, 42, 133, 0.1);
+
+  /* ── Semantic state ─────────────────────────────────────────────────── */
+  --success:   #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.15);
+  --danger:    #ef4444;
+  --danger-soft:  rgba(239, 68, 68, 0.15);
+  --warning:   #f59e0b;
+  --whatsapp:  #25D366;
+
+  /* ── Radii scale ────────────────────────────────────────────────────── */
+  --radius-xs:  6px;
+  --radius-sm:  8px;
+  --radius-md:  10px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-2xl: 24px;
+  --radius-pill: 9999px;
+
+  /* ── Spacing scale (rem) ────────────────────────────────────────────── */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-5:  1.25rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+
+  /* ── Type ───────────────────────────────────────────────────────────── */
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ── Z-index scale ──────────────────────────────────────────────────── */
+  --z-nav:     50;
+  --z-modal:   100;
+  --z-toast:   200;
+
+  /* ── Hairlines ──────────────────────────────────────────────────────── */
+  --hairline:  1px solid rgba(255, 255, 255, 0.05);
+  --hairline-strong: 1px solid rgba(255, 255, 255, 0.10);
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
 
 body {
   background-color: var(--bg-dark);
   color: var(--text-primary);
-  font-family: var(--font-outfit), sans-serif;
+  font-family: var(--font-outfit), system-ui, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+a { color: inherit; text-decoration: none; transition: color 0.2s ease, opacity 0.2s ease; }
+a:hover { opacity: 0.85; }
 
 button {
   cursor: pointer;
   border: none;
   font-family: inherit;
+  color: inherit;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+button:active:not(:disabled) { transform: scale(0.97); }
+
+:focus-visible {
+  outline: 2px solid var(--accent-pink);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* Utils */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-card); }
+::-webkit-scrollbar-thumb { background: var(--accent-pink); border-radius: 4px; }
+
+/* =========================================================================
+   Utility classes
+   ========================================================================= */
 .glass {
   background: rgba(21, 21, 32, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: var(--hairline);
 }
 
 .text-gradient {
@@ -48,25 +129,44 @@ button {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: transparent;
 }
+
+.mono { font-family: var(--font-mono); }
+
+.ds-label {
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.glow-pink    { box-shadow: var(--shadow-cta-pink); }
+.glow-pink-lg { box-shadow: var(--shadow-cta-pink-lg); }
+.glow-blue    { box-shadow: var(--shadow-cta-blue); }
+
+.surface-1 { background: var(--surface-1); }
+.surface-2 { background: var(--surface-2); }
+.surface-3 { background: var(--surface-3); }
+.surface-4 { background: var(--surface-4); }
 
 .btn-primary {
   background: var(--accent-neon);
   color: white;
   padding: 0.75rem 1.5rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   font-weight: 600;
   font-size: 1rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 15px var(--glow-pink);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: var(--shadow-cta-pink);
   text-transform: uppercase;
   letter-spacing: 1px;
 }
-
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 25px var(--glow-blue);
+  box-shadow: var(--shadow-cta-blue);
 }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .container {
   max-width: 1200px;
@@ -74,18 +174,204 @@ button {
   padding: 0 1.5rem;
 }
 
-/* Animations */
+/* =========================================================================
+   Animations
+   ========================================================================= */
 @keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.8s ease forwards; }
+
+@keyframes shimmer {
+  from { background-position: -600px 0; }
+  to   { background-position:  600px 0; }
+}
+.skeleton {
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface-3) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 600px 100%;
+  animation: shimmer 1.6s infinite linear;
 }
 
-.animate-fade-in-up {
-  animation: fade-in-up 0.8s ease forwards;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
+.spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--surface-3);
+  border-top-color: var(--accent-pink);
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes cart-toast-in {
+  from { opacity: 0; transform: translateX(110%) scale(0.92); }
+  to   { opacity: 1; transform: translateX(0)   scale(1); }
+}
+@keyframes cart-toast-out {
+  from { opacity: 1; transform: translateX(0)   scale(1); }
+  to   { opacity: 0; transform: translateX(110%) scale(0.92); }
+}
+@keyframes btn-added-pop {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(0.88); }
+  65%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes badge-bounce {
+  0%, 100% { transform: scale(1); }
+  45%       { transform: scale(1.5); }
+}
+
+/* =========================================================================
+   Admin panel utilities
+   ========================================================================= */
+@keyframes admin-row-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.admin-row-in {
+  animation: admin-row-in 0.35s ease both;
+}
+
+@keyframes admin-slide-down {
+  from { opacity: 0; transform: translateY(-12px); max-height: 0; }
+  to   { opacity: 1; transform: translateY(0);    max-height: 600px; }
+}
+.admin-slide-down {
+  animation: admin-slide-down 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  overflow: hidden;
+}
+
+.admin-stat-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.admin-stat-card:hover {
+  transform: translateY(-3px);
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-md);
+  font-size: 0.92rem;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  border-left: 3px solid transparent;
+  color: var(--text-secondary);
+  font-weight: 400;
+  text-decoration: none;
+}
+.admin-nav-item:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+  opacity: 1;
+}
+.admin-nav-item.active {
+  background: linear-gradient(135deg, rgba(255,42,133,0.12), rgba(59,130,246,0.12));
+  border-left-color: var(--accent-pink);
+  color: white;
+  font-weight: 600;
+}
+
+.admin-product-row {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.admin-product-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.admin-icon-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.admin-icon-btn:hover {
+  background: var(--surface-3);
+  color: white;
+  border-color: rgba(255,255,255,0.2);
+}
+.admin-icon-btn.danger:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(239,68,68,0.35);
+}
+
+.admin-promo-card {
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.admin-promo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255,42,133,0.12);
+}
+
+.admin-quick-link {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.admin-quick-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(255, 42, 133, 0.18);
+  border-color: rgba(255, 42, 133, 0.4) !important;
+  opacity: 1;
+}
+
+.admin-progress-bar {
+  transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ─── Admin Slide Down (expandibles) ─── */
+@keyframes admin-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.admin-slide-down {
+  animation: admin-slide-down 0.2s ease both;
+}
+
+/* ─── Admin Modal ─── */
+@keyframes admin-modal-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+.admin-modal-enter {
+  animation: admin-modal-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ─── Admin Input ─── */
+.admin-input {
+  background-color: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.9rem;
+  color: white;
+  width: 100%;
+  font-size: 0.93rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.admin-input:focus {
+  border-color: rgba(255, 42, 133, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 42, 133, 0.1);
+  background-color: rgba(255,255,255,0.06);
+}
+.admin-input::placeholder { color: rgba(255,255,255,0.22); }
+.admin-input option { background: #13131e; }

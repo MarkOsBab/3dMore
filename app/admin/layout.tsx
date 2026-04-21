@@ -1,66 +1,165 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Tag, Home, LayoutDashboard } from "lucide-react";
+import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Productos", icon: Package },
   { href: "/admin/promos", label: "Promociones", icon: Tag },
+  { href: "/admin/orders", label: "Pedidos", icon: ShoppingBag },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#0a0a0f" }}>
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--bg-dark)" }}>
       {/* Sidebar */}
-      <aside style={{ width: "240px", flexShrink: 0, backgroundColor: "#111118", borderRight: "1px solid rgba(255,255,255,0.06)", padding: "2rem 1rem", display: "flex", flexDirection: "column" }}>
-        <div style={{ marginBottom: "2.5rem", padding: "0 0.75rem" }}>
-          <p style={{ fontSize: "0.7rem", color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "2px", marginBottom: "0.25rem" }}>3dMore</p>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 700 }}>Admin Panel</h2>
+      <aside
+        style={{
+          width: "256px",
+          flexShrink: 0,
+          backgroundColor: "#0d0d14",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+          padding: "0",
+          display: "flex",
+          flexDirection: "column",
+          position: "sticky",
+          top: 0,
+          height: "100vh",
+        }}
+      >
+        {/* Brand */}
+        <div
+          style={{
+            padding: "1.75rem 1.5rem 1.5rem",
+            borderBottom: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.25rem" }}>
+            <div
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: "var(--radius-sm)",
+                background: "var(--accent-neon)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                letterSpacing: "-0.5px",
+                flexShrink: 0,
+              }}
+            >
+              3D
+            </div>
+            <div>
+              <div
+                className="text-gradient"
+                style={{ fontWeight: 800, fontSize: "1.05rem", letterSpacing: "1px", lineHeight: 1 }}
+              >
+                3DMORE
+              </div>
+              <div
+                style={{
+                  fontSize: "0.62rem",
+                  color: "var(--text-muted)",
+                  letterSpacing: "2px",
+                  textTransform: "uppercase",
+                  marginTop: 2,
+                }}
+              >
+                Admin Panel
+              </div>
+            </div>
+          </div>
         </div>
 
-        <nav style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+        {/* Nav */}
+        <nav style={{ padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "0.15rem", flexGrow: 1 }}>
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
             return (
               <Link
                 key={href}
                 href={href}
-                style={{
-                  display: "flex", alignItems: "center", gap: "0.75rem",
-                  padding: "0.75rem 1rem", borderRadius: "8px",
-                  fontWeight: active ? 600 : 400,
-                  color: active ? "white" : "var(--text-secondary)",
-                  background: active ? "linear-gradient(135deg,rgba(255,42,133,0.15),rgba(59,130,246,0.15))" : "transparent",
-                  borderLeft: active ? "3px solid var(--accent-pink)" : "3px solid transparent",
-                  transition: "all 0.2s",
-                  fontSize: "0.95rem",
-                }}
+                className={`admin-nav-item${active ? " active" : ""}`}
               >
-                <Icon size={18} />
+                <Icon size={17} />
                 {label}
               </Link>
             );
           })}
         </nav>
 
-        <div style={{ marginTop: "auto", padding: "1rem", borderRadius: "8px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-            🔒 Panel protegido con Basic Auth. No compartas tus credenciales.
-          </p>
-          <a href="/" target="_blank" style={{ display: "inline-block", marginTop: "0.75rem", fontSize: "0.85rem", color: "var(--accent-blue)", textDecoration: "underline" }}>
-            Ver tienda →
+        {/* Footer */}
+        <div style={{ padding: "0.75rem", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <div
+            style={{
+              borderRadius: "var(--radius-md)",
+              padding: "0.85rem 1rem",
+              background: "rgba(34,197,94,0.06)",
+              border: "1px solid rgba(34,197,94,0.15)",
+              marginBottom: "0.75rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.6rem",
+            }}
+          >
+            <ShieldCheck size={14} color="var(--success)" style={{ flexShrink: 0 }} />
+            <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+              Sesión protegida con Basic Auth
+            </p>
+          </div>
+          <a
+            href="/"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              padding: "0.6rem 1rem",
+              borderRadius: "var(--radius-md)",
+              fontSize: "0.85rem",
+              color: "var(--text-secondary)",
+              background: "var(--surface-1)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              transition: "background 0.18s ease, color 0.18s ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "var(--surface-2)";
+              (e.currentTarget as HTMLElement).style.color = "white";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "var(--surface-1)";
+              (e.currentTarget as HTMLElement).style.color = "var(--text-secondary)";
+            }}
+          >
+            <ExternalLink size={14} />
+            Ver tienda
           </a>
         </div>
       </aside>
 
       {/* Main content */}
-      <main style={{ flexGrow: 1, padding: "3rem", overflowY: "auto", maxHeight: "100vh" }}>
-        {children}
+      <main
+        style={{
+          flexGrow: 1,
+          overflowY: "auto",
+          maxHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ flexGrow: 1, padding: "2.5rem 3rem", maxWidth: 1100 }}>
+          {children}
+        </div>
       </main>
     </div>
   );
 }
+
