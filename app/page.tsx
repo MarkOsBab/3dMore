@@ -73,7 +73,7 @@ export default async function Home() {
             </div>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "2rem" }}>
-              {products.map((product: Product, index) => (
+              {products.map((product: Product, index: number) => (
                 <div key={product.id} style={{ animationDelay: `${0.1 * index}s` }} className="animate-fade-in-up">
                   <ProductCard product={product} />
                 </div>
