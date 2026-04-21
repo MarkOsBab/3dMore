@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   // ── Basic Auth para /admin ────────────────────────────────────────────────
   if (req.nextUrl.pathname.startsWith("/admin")) {
     const basicAuth = req.headers.get("authorization");
