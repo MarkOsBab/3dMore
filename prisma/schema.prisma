@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  category    String
+  isActive    Boolean  @default(true)
+  isOffer     Boolean  @default(false)
+  discountPct Float?   @default(0)
+  thumbnail   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  variants ProductVariant[]
+}
+
+model ProductVariant {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  colorName   String
+  imageUrl    String
+  price       Float?
+  isOffer     Boolean  @default(false)
+  discountPct Float?   @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model PromoCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  discountPct Float
+  validUntil  DateTime?
+  usageLimit  Int?      @default(100)
+  timesUsed   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+}
