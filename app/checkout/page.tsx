@@ -142,27 +142,43 @@ export default function CheckoutPage() {
   };
 
   const payWithWhatsApp = () => {
+    // String.fromCodePoint garantiza emojis correctos sin problemas de encoding en el source
+    const E = {
+      tag:    String.fromCodePoint(0x1F3F7), // 🏷
+      money:  String.fromCodePoint(0x1F4B0), // 💰
+      house:  String.fromCodePoint(0x1F3E0), // 🏠
+      box:    String.fromCodePoint(0x1F4E6), // 📦
+      store:  String.fromCodePoint(0x1F3EA), // 🏪
+      memo:   String.fromCodePoint(0x1F4DD), // 📝
+      person: String.fromCodePoint(0x1F464), // 👤
+      mobile: String.fromCodePoint(0x1F4F1), // 📱
+    };
+
     const orderText = items
       .map((item) => `\u2022 ${item.quantity}x ${item.name}${item.variantColorName ? ` (${item.variantColorName})` : ""} \u2014 $${(getUnitPrice(item) * item.quantity).toFixed(0)}`)
       .join("\n");
+
     const shippingText =
-      shippingMethod === "HOME_MVD" ? `\uD83C\uDFE0 Env\u00edo a domicilio \u2014 ${selectedZone?.name}: ${address} ($${shippingCost} efectivo/transferencia al entregar)` :
-      shippingMethod === "AGENCY"   ? `\uD83D\uDCE6 Env\u00edo por agencia DAC \u2014 ${agency} (pago al retirar)` :
-                                      `\uD83C\uDFEA Retiro en domicilio del vendedor (a coordinar)`;
+      shippingMethod === "HOME_MVD"
+        ? `${E.house} Env\u00edo a domicilio \u2014 ${selectedZone?.name}: ${address} ($${shippingCost} efectivo/transferencia al entregar)`
+        : shippingMethod === "AGENCY"
+        ? `${E.box} Env\u00edo por agencia DAC \u2014 ${agency} (pago al retirar)`
+        : `${E.store} Retiro en domicilio del vendedor (a coordinar)`;
+
     const lines: string[] = [
       "\u00a1Hola 3DMORE! Quiero hacer un pedido:",
       "",
       orderText,
       "",
     ];
-    if (promoCode) lines.push(`\uD83C\uDFF7 C\u00f3digo: ${promoCode} (-${promoDiscount}%)`);
-    lines.push(`\uD83D\uDCB0 Total productos: $${total.toFixed(0)} UYU`);
+    if (promoCode) lines.push(`${E.tag} C\u00f3digo: ${promoCode} (-${promoDiscount}%)`);
+    lines.push(`${E.money} Total productos: $${total.toFixed(0)} UYU`);
     lines.push("");
     lines.push(shippingText);
-    if (notes) lines.push(`\uD83D\uDCDD ${notes}`);
+    if (notes) lines.push(`${E.memo} ${notes}`);
     lines.push("");
-    lines.push(`\uD83D\uDC64 ${form.firstName} ${form.lastName}`);
-    lines.push(`\uD83D\uDCF1 ${form.phone}  |  CI: ${form.documentId}`);
+    lines.push(`${E.person} ${form.firstName} ${form.lastName}`);
+    lines.push(`${E.mobile} ${form.phone}  |  CI: ${form.documentId}`);
 
     const msg = lines.join("\n");
     const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";

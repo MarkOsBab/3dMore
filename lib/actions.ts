@@ -36,7 +36,7 @@ export async function createProduct(data: {
   isOffer?: boolean;
   discountPct?: number;
 }) {
-  const product = await prisma.product.create({ data });
+  const product = await prisma.product.create({ data: { ...data, isActive: false } });
   revalidatePath("/");
   revalidatePath("/admin/products");
   return product;
