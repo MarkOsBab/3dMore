@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const { items, subtotal, total, promoCode, promoDiscount } = useCart();
 
   const [step, setStep] = useState<Step>(0);
+  const hasAutoAdvanced = useRef(false);
   const [zones, setZones] = useState<ShippingZone[]>([]);
 
   // Step 1 — Perfil
@@ -67,9 +68,10 @@ export default function CheckoutPage() {
     }
   }, [loading, items.length, router]);
 
-  // Auto-avanzar al step 1 si ya está todo OK en step 0
+  // Auto-avanzar al step 1 si ya está todo OK en step 0 (solo la primera vez — no al volver atrás)
   useEffect(() => {
-    if (user && isProfileComplete && step === 0) {
+    if (user && isProfileComplete && step === 0 && !hasAutoAdvanced.current) {
+      hasAutoAdvanced.current = true;
       setStep(1);
     }
   }, [user, isProfileComplete, step]);
@@ -254,27 +256,29 @@ export default function CheckoutPage() {
             )}
 
             {/* Footer de navegación */}
-            {step > 0 && step < 2 && (
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            {step > 0 && (
+              <div style={{ display: "flex", justifyContent: step === 2 ? "flex-start" : "space-between", marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
                 <button
                   onClick={() => setStep((step - 1) as Step)}
                   style={{ display: "flex", alignItems: "center", gap: 6, padding: "0.7rem 1.2rem", background: "transparent", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-pill)", cursor: "pointer" }}
                 >
                   <ChevronLeft size={16} /> Atrás
                 </button>
-                <button
-                  onClick={() => setStep((step + 1) as Step)}
-                  disabled={step === 1 && !canProceedFromShipping()}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    padding: "0.75rem 1.3rem", background: "var(--accent-pink)",
-                    color: "white", border: "none", borderRadius: "var(--radius-pill)",
-                    cursor: "pointer", fontWeight: 600,
-                    opacity: step === 1 && !canProceedFromShipping() ? 0.4 : 1,
-                  }}
-                >
-                  Continuar <ChevronRight size={16} />
-                </button>
+                {step < 2 && (
+                  <button
+                    onClick={() => setStep((step + 1) as Step)}
+                    disabled={step === 1 && !canProceedFromShipping()}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "0.75rem 1.3rem", background: "var(--accent-pink)",
+                      color: "white", border: "none", borderRadius: "var(--radius-pill)",
+                      cursor: "pointer", fontWeight: 600,
+                      opacity: step === 1 && !canProceedFromShipping() ? 0.4 : 1,
+                    }}
+                  >
+                    Continuar <ChevronRight size={16} />
+                  </button>
+                )}
               </div>
             )}
           </div>
