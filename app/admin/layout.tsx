@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut } from "lucide-react";
+import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut, Star } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ConfirmProvider } from "@/components/admin/ConfirmDialog";
 
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/promos", label: "Promociones", icon: Tag },
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingBag },
   { href: "/admin/shipping", label: "Envíos", icon: Truck },
+  { href: "/admin/reviews", label: "Reseñas", icon: Star },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
