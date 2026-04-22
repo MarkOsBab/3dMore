@@ -16,6 +16,7 @@ export default function CartModal() {
   const [promoMsg, setPromoMsg] = useState("");
   const [promoStatus, setPromoStatus] = useState<"idle" | "ok" | "err">("idle");
   const [promoLoading, setPromoLoading] = useState(false);
+  const [exitingId, setExitingId] = useState<string | null>(null);
 
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -32,6 +33,14 @@ export default function CartModal() {
       return () => clearTimeout(t);
     }
   }, [isCartOpen]);
+
+  const handleRemove = (id: string) => {
+    setExitingId(id);
+    setTimeout(() => {
+      removeFromCart(id);
+      setExitingId(null);
+    }, 340);
+  };
 
   const handleApplyPromo = async () => {
     if (!codeInput.trim()) return;
@@ -94,8 +103,23 @@ export default function CartModal() {
           ) : (
             items.map((item) => {
               const unitPriceValue = getUnitPrice(item);
+              const isExiting = exitingId === item.id;
               return (
-                <div key={item.id} style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    gap: "1rem",
+                    alignItems: "center",
+                    transition: "transform 0.34s cubic-bezier(0.4,0,0.2,1), opacity 0.34s ease, max-height 0.34s ease",
+                    transform: isExiting ? "translateX(60px)" : "translateX(0)",
+                    opacity: isExiting ? 0 : 1,
+                    maxHeight: isExiting ? "0" : "120px",
+                    overflow: "hidden",
+                    pointerEvents: isExiting ? "none" : "auto",
+                    ...(isExiting ? {} : {}),
+                  }}
+                >
                   {item.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.imageUrl} alt={item.name} style={{ width: 68, height: 68, borderRadius: "var(--radius-md)", objectFit: "cover", flexShrink: 0 }} />
@@ -118,7 +142,7 @@ export default function CartModal() {
                     <span style={{ fontWeight: 700, color: "var(--accent-blue)" }}>
                       ${(unitPriceValue * item.quantity).toFixed(0)}
                     </span>
-                    <button aria-label="Eliminar producto" style={{ color: "var(--accent-pink)", background: "none" }} onClick={() => removeFromCart(item.id)}>
+                    <button aria-label="Eliminar producto" style={{ color: "var(--accent-pink)", background: "none" }} onClick={() => handleRemove(item.id)}>
                       <Trash2 size={16} />
                     </button>
                   </div>
