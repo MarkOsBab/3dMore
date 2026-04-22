@@ -22,6 +22,17 @@ async function issueLoyaltyPromo(orderId: string) {
     });
     if (!order?.userId || order.loyaltyPromoIssued) return;
 
+    // No emitir si el usuario ya tiene un cupón VIP activo sin usar
+    const existing = await prisma.promoCode.findFirst({
+      where: {
+        userId: order.userId,
+        isActive: true,
+        timesUsed: 0,
+        code: { startsWith: "VIP-" },
+      },
+    });
+    if (existing) return;
+
     const code = `VIP-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
     const validUntil = new Date();
     validUntil.setMonth(validUntil.getMonth() + 3);
