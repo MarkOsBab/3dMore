@@ -183,7 +183,8 @@ export default function CheckoutPage() {
 
     const msg = lines.join("\n");
     const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
-    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
+    // Usar api.whatsapp.com directamente evita el redirect de wa.me que re-codifica y corrompe emojis
+    window.open(`https://api.whatsapp.com/send?phone=${whatsapp}&text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   if (loading || items.length === 0) {
