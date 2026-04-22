@@ -97,10 +97,23 @@ export default function Navbar() {
         >
           <Link
             href="/"
-            className="text-gradient"
-            style={{ fontSize: "1.5rem", fontWeight: 800, letterSpacing: "2px" }}
+            style={{ display: "flex", alignItems: "center", gap: "0.6rem", textDecoration: "none" }}
           >
-            3DMORE
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/icon.jpg"
+              alt="3DMORE logo"
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: "var(--radius-sm)",
+                objectFit: "cover",
+                flexShrink: 0,
+              }}
+            />
+            <span className="text-gradient" style={{ fontSize: "1.5rem", fontWeight: 800, letterSpacing: "2px" }}>
+              3DMORE
+            </span>
           </Link>
 
           {/* Desktop nav links — hidden on mobile via CSS */}

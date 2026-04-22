@@ -81,7 +81,11 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/images/icon.jpg", type: "image/jpeg" },
+    ],
+    apple: "/images/icon.jpg",
+    shortcut: "/images/icon.jpg",
   },
   formatDetection: {
     telephone: true,
