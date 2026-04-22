@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag } from "lucide-react";
+import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const NAV = [
@@ -9,6 +9,7 @@ const NAV = [
   { href: "/admin/products", label: "Productos", icon: Package },
   { href: "/admin/promos", label: "Promociones", icon: Tag },
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingBag },
+  { href: "/admin/shipping", label: "Envíos", icon: Truck },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

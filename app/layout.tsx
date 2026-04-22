@@ -5,6 +5,7 @@ import Navbar from "../components/Navbar";
 import CartModal from "../components/CartModal";
 import CartToast from "../components/CartToast";
 import { CartProvider } from "../lib/CartContext";
+import { AuthProvider } from "../lib/AuthContext";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -24,12 +25,14 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${outfit.variable}`}>
       <body>
-        <CartProvider>
-          <Navbar />
-          {children}
-          <CartModal />
-          <CartToast />
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Navbar />
+            {children}
+            <CartModal />
+            <CartToast />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

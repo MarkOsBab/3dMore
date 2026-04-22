@@ -1,10 +1,12 @@
 "use client";
 
 import { useCart, getUnitPrice } from "@/lib/CartContext";
-import { X, Trash2, Tag, CheckCircle, XCircle } from "lucide-react";
+import { X, Trash2, Tag, CheckCircle, XCircle, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 export default function CartModal() {
+  const router = useRouter();
   const {
     items, isCartOpen, setIsCartOpen, removeFromCart,
     subtotal, total, promoCode, promoDiscount, applyPromo, removePromo,
@@ -14,16 +16,13 @@ export default function CartModal() {
   const [promoMsg, setPromoMsg] = useState("");
   const [promoStatus, setPromoStatus] = useState<"idle" | "ok" | "err">("idle");
   const [promoLoading, setPromoLoading] = useState(false);
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // Mount/unmount with animation timing
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     if (isCartOpen) {
       setShouldRender(true);
-      // Double rAF to ensure DOM is painted before transition starts
       requestAnimationFrame(() =>
         requestAnimationFrame(() => setIsVisible(true))
       );
@@ -44,32 +43,9 @@ export default function CartModal() {
     if (result.valid) setCodeInput("");
   };
 
-  const handleCheckoutWhatsApp = () => {
-    const orderText = items
-      .map((item) => `${item.quantity}x ${item.name}${item.variantColorName ? ` (${item.variantColorName})` : ""} — $${(getUnitPrice(item) * item.quantity).toFixed(0)} UYU`)
-      .join("\n");
-    const promoLine = promoCode ? `\nCódigo promo: ${promoCode} (-${promoDiscount}%)` : "";
-    const message = `Hola 3DMORE! Me gustaría hacer un pedido:\n\n${orderText}${promoLine}\n\nTotal: $${total.toFixed(0)} UYU\n\nEspero instrucciones para el pago. ¡Gracias!`;
-    window.open(`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, "_blank");
-  };
-
-  const handleCheckoutMP = async () => {
-    if (checkoutLoading) return;
-    setCheckoutLoading(true);
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, promoCode, promoDiscount }),
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert("Hubo un error al generar el pago.");
-    } catch {
-      alert("Hubo un error de conexión.");
-    } finally {
-      setCheckoutLoading(false);
-    }
+  const handleContinue = () => {
+    setIsCartOpen(false);
+    router.push("/checkout");
   };
 
   if (!shouldRender) return null;
@@ -105,7 +81,6 @@ export default function CartModal() {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700 }}>TU CARRITO</h2>
           <button aria-label="Cerrar carrito" style={{ background: "none", color: "white" }} onClick={() => setIsCartOpen(false)}>
@@ -113,7 +88,6 @@ export default function CartModal() {
           </button>
         </div>
 
-        {/* Items */}
         <div style={{ flexGrow: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "1.25rem", paddingRight: "0.25rem" }}>
           {items.length === 0 ? (
             <p style={{ color: "var(--text-secondary)", textAlign: "center", marginTop: "3rem" }}>Tu carrito está vacío.</p>
@@ -123,6 +97,7 @@ export default function CartModal() {
               return (
                 <div key={item.id} style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
                   {item.imageUrl && (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.imageUrl} alt={item.name} style={{ width: 68, height: 68, borderRadius: "var(--radius-md)", objectFit: "cover", flexShrink: 0 }} />
                   )}
                   <div style={{ flexGrow: 1, minWidth: 0 }}>
@@ -156,7 +131,6 @@ export default function CartModal() {
         {items.length > 0 && (
           <div style={{ paddingTop: "1.5rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
 
-            {/* Promo code */}
             <div style={{ marginBottom: "1.5rem" }}>
               {!promoCode ? (
                 <div>
@@ -193,7 +167,6 @@ export default function CartModal() {
               )}
             </div>
 
-            {/* Totals */}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1.5rem" }}>
               {promoDiscount > 0 && (
                 <>
@@ -211,24 +184,27 @@ export default function CartModal() {
                 <span>Total</span>
                 <span className="text-gradient">${total.toFixed(0)} UYU</span>
               </div>
+              <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 4 }}>
+                El costo de envío se calcula en el siguiente paso.
+              </p>
             </div>
 
-            {/* Checkout buttons */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <button onClick={handleCheckoutMP} disabled={checkoutLoading} className="btn-primary" style={{ width: "100%", background: "var(--accent-blue)", boxShadow: "var(--shadow-cta-blue)", opacity: checkoutLoading ? 0.7 : 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-                {checkoutLoading ? (
-                  <><span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Procesando…</>
-                ) : (
-                  <>💳 PAGAR CON MERCADO PAGO</>
-                )}
-              </button>
-              <button onClick={handleCheckoutWhatsApp} className="btn-primary" style={{ width: "100%", background: "transparent", border: "2px solid var(--whatsapp)", color: "var(--whatsapp)", boxShadow: "none" }}>
-                💬 PAGAR POR WHATSAPP
-              </button>
-            </div>
+            <button
+              onClick={handleContinue}
+              className="btn-primary"
+              style={{
+                width: "100%", background: "var(--accent-pink)",
+                boxShadow: "var(--shadow-cta-pink, 0 10px 30px -10px rgba(255,42,133,0.6))",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                gap: "0.6rem", fontWeight: 700,
+              }}
+            >
+              Continuar al checkout <ArrowRight size={18} />
+            </button>
           </div>
         )}
       </div>
     </div>
   );
 }
+

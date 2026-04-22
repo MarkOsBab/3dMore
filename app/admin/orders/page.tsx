@@ -8,5 +8,6 @@ export default async function OrdersPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  return <OrdersClient initialOrders={orders} />;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <OrdersClient initialOrders={orders as any[]} />;
 }

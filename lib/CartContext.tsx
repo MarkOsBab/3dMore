@@ -88,7 +88,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
     setLastAdded(product);
   };
-2
+
   const removeFromCart = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
   };

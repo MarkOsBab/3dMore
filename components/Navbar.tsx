@@ -2,19 +2,22 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, User, LogOut, Package, LogIn } from "lucide-react";
 import { useCart } from "../lib/CartContext";
+import { useAuth } from "../lib/AuthContext";
 
 export default function Navbar() {
   const { items, setIsCartOpen, lastAdded } = useCart();
+  const { user, profile, loading, signInWithGoogle, signOut } = useAuth();
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   const [badgePulse, setBadgePulse] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!lastAdded) return;
     setBadgePulse(false);
-    // forzar re-render para reiniciar la animación
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setBadgePulse(true));
     });
@@ -22,6 +25,20 @@ export default function Navbar() {
     pulseTimer.current = setTimeout(() => setBadgePulse(false), 500);
     return () => { if (pulseTimer.current) clearTimeout(pulseTimer.current); };
   }, [lastAdded]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    if (menuOpen) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [menuOpen]);
+
+  const displayName = profile?.firstName
+    ? profile.firstName
+    : (user?.user_metadata?.name as string | undefined)?.split(" ")[0] ?? "Mi cuenta";
 
   return (
     <nav
@@ -45,10 +62,93 @@ export default function Navbar() {
           3DMORE
         </Link>
 
-        <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           <Link href="/#products" style={{ fontWeight: 500, transition: "color 0.2s" }}>
             Catálogo
           </Link>
+
+          {!loading && (
+            user ? (
+              <div ref={menuRef} style={{ position: "relative" }}>
+                <button
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-label="Mi cuenta"
+                  style={{
+                    display: "flex", alignItems: "center", gap: "0.5rem",
+                    background: "transparent", color: "white", padding: "0.3rem 0.6rem",
+                    border: "1px solid rgba(255,255,255,0.08)", borderRadius: "var(--radius-pill)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {profile?.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profile.avatarUrl}
+                      alt=""
+                      style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: 26, height: 26, borderRadius: "50%",
+                      background: "var(--accent-pink)", display: "flex",
+                      alignItems: "center", justifyContent: "center",
+                      fontSize: "0.75rem", fontWeight: 700,
+                    }}>
+                      {(displayName[0] ?? "U").toUpperCase()}
+                    </div>
+                  )}
+                  <span style={{ fontSize: "0.88rem", fontWeight: 500 }}>{displayName}</span>
+                </button>
+
+                {menuOpen && (
+                  <div
+                    className="glass admin-modal-enter"
+                    style={{
+                      position: "absolute", top: "calc(100% + 0.6rem)", right: 0,
+                      minWidth: 220, borderRadius: "var(--radius-lg)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      padding: "0.5rem", display: "flex", flexDirection: "column", gap: 2,
+                    }}
+                  >
+                    <div style={{ padding: "0.6rem 0.8rem", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 4 }}>
+                      <p style={{ fontSize: "0.82rem", fontWeight: 600 }}>{displayName}</p>
+                      <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>{user.email}</p>
+                    </div>
+                    <MenuLink href="/account" icon={User} label="Mi perfil" onClick={() => setMenuOpen(false)} />
+                    <MenuLink href="/account/orders" icon={Package} label="Mis pedidos" onClick={() => setMenuOpen(false)} />
+                    <button
+                      onClick={() => { setMenuOpen(false); signOut(); }}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "0.6rem",
+                        padding: "0.6rem 0.8rem", background: "transparent",
+                        color: "var(--text-secondary)", border: "none", cursor: "pointer",
+                        borderRadius: "var(--radius-sm)", textAlign: "left", width: "100%",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      <LogOut size={15} />
+                      Cerrar sesión
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => signInWithGoogle()}
+                style={{
+                  display: "flex", alignItems: "center", gap: "0.45rem",
+                  padding: "0.45rem 0.95rem", borderRadius: "var(--radius-pill)",
+                  background: "rgba(255,255,255,0.06)", color: "white",
+                  border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer",
+                  fontSize: "0.85rem", fontWeight: 500,
+                }}
+              >
+                <LogIn size={15} />
+                Ingresar
+              </button>
+            )
+          )}
+
           <button
             aria-label="Abrir carrito"
             style={{ background: "transparent", color: "white", position: "relative", padding: 4 }}
@@ -81,5 +181,29 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+  );
+}
+
+function MenuLink({
+  href, icon: Icon, label, onClick,
+}: {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  onClick?: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: "0.6rem",
+        padding: "0.6rem 0.8rem", borderRadius: "var(--radius-sm)",
+        color: "white", fontSize: "0.85rem", transition: "background 0.15s",
+      }}
+    >
+      <Icon size={15} color="var(--accent-pink)" />
+      {label}
+    </Link>
   );
 }

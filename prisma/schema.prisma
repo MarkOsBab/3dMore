@@ -42,23 +42,60 @@ model PromoCode {
   usageLimit  Int?      @default(100)
   timesUsed   Int       @default(0)
   isActive    Boolean   @default(true)
+  userId      String?   // si no-null, solo ese user puede usarlo
   createdAt   DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model UserProfile {
+  id         String   @id // supabase auth user id
+  email      String?
+  firstName  String?
+  lastName   String?
+  documentId String?
+  phone      String?
+  avatarUrl  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ShippingZone {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  cost      Float
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Order {
-  id                String      @id @default(cuid())
-  mpPaymentId       String?     @unique
-  mpExternalRef     String      @unique
-  status            OrderStatus @default(PENDING)
-  items             Json        // Array de CartItem serializado
-  subtotal          Float
-  total             Float
-  promoCode         String?
-  promoDiscount     Float       @default(0)
-  payerEmail        String?
-  payerName         String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  id                 String         @id @default(cuid())
+  mpPaymentId        String?        @unique
+  mpExternalRef      String         @unique
+  status             OrderStatus    @default(PENDING)
+  items              Json           // Array de CartItem serializado
+  subtotal           Float
+  total              Float
+  promoCode          String?
+  promoDiscount      Float          @default(0)
+  payerEmail         String?
+  payerName          String?
+  userId             String?
+  shippingMethod     ShippingMethod @default(PICKUP)
+  shippingCost       Float          @default(0)
+  shippingData       Json?          // { zoneId?, zoneName?, address?, agency?, notes? }
+  customerFirstName  String?
+  customerLastName   String?
+  customerDocument   String?
+  customerPhone      String?
+  customerEmail      String?
+  loyaltyPromoIssued Boolean        @default(false)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([userId])
 }
 
 enum OrderStatus {
@@ -66,4 +103,10 @@ enum OrderStatus {
   APPROVED
   REJECTED
   CANCELLED
+}
+
+enum ShippingMethod {
+  HOME_MVD
+  AGENCY
+  PICKUP
 }

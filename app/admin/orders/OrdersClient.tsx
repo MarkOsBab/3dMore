@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingBag, CheckCircle, Clock, XCircle, ChevronDown, ChevronUp, RefreshCcw } from "lucide-react";
+import { ShoppingBag, CheckCircle, Clock, XCircle, ChevronDown, ChevronUp, RefreshCcw, Home, Package, MapPin, Phone, FileText, Mail } from "lucide-react";
 
 type OrderStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
 
 interface OrderItem {
   name?: string;
@@ -12,6 +13,13 @@ interface OrderItem {
   price?: number;
   isOffer?: boolean;
   discountPercentage?: number;
+}
+
+interface ShippingData {
+  zoneName?: string;
+  address?: string;
+  agency?: string;
+  notes?: string;
 }
 
 interface Order {
@@ -27,7 +35,23 @@ interface Order {
   payerEmail: string | null;
   payerName: string | null;
   createdAt: string | Date;
+  // campos de envío
+  shippingMethod: ShippingMethod;
+  shippingCost: number;
+  shippingData: ShippingData | null;
+  // datos del cliente
+  customerFirstName: string | null;
+  customerLastName: string | null;
+  customerDocument: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
 }
+
+const SHIPPING_LABEL: Record<ShippingMethod, { label: string; Icon: React.ElementType }> = {
+  HOME_MVD: { label: "Domicilio MVD", Icon: Home },
+  AGENCY:   { label: "Agencia DAC",   Icon: Package },
+  PICKUP:   { label: "Retiro",        Icon: MapPin },
+};
 
 interface Props {
   initialOrders: Order[];
@@ -169,13 +193,25 @@ export default function OrdersClient({ initialOrders }: Props) {
                       <span style={{ fontFamily: "var(--font-mono)", fontSize: "0.82rem", color: "var(--text-secondary)" }}>
                         #{order.id.slice(0, 8)}
                       </span>
-                      {order.payerName && (
-                        <span style={{ fontSize: "0.88rem", fontWeight: 500 }}>{order.payerName}</span>
+                      {(order.customerFirstName || order.payerName) && (
+                        <span style={{ fontSize: "0.88rem", fontWeight: 500 }}>
+                          {order.customerFirstName ? `${order.customerFirstName} ${order.customerLastName ?? ""}`.trim() : order.payerName}
+                        </span>
                       )}
+                      {order.shippingMethod && (() => {
+                        const sm = SHIPPING_LABEL[order.shippingMethod];
+                        return (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: "0.72rem", color: "var(--accent-blue)", background: "rgba(59,130,246,0.1)", padding: "2px 7px", borderRadius: "99px" }}>
+                            <sm.Icon size={11} /> {sm.label}
+                          </span>
+                        );
+                      })()}
                     </div>
                     <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: 2 }}>
                       {date} · {items.length} producto{items.length !== 1 ? "s" : ""}
                       {order.promoCode ? ` · 🏷 ${order.promoCode}` : ""}
+                      {order.shippingData?.address ? ` · 📍 ${order.shippingData.address}` : ""}
+                      {order.shippingData?.agency ? ` · ${order.shippingData.agency}` : ""}
                     </p>
                   </div>
 
@@ -231,14 +267,64 @@ export default function OrdersClient({ initialOrders }: Props) {
                         )}
                       </div>
                       <div>
-                        <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "1px", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.4rem" }}>Comprador</p>
-                        {order.payerName && <p style={{ fontSize: "0.88rem" }}>{order.payerName}</p>}
-                        {order.payerEmail && <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{order.payerEmail}</p>}
-                        {!order.payerName && !order.payerEmail && (
+                        <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "1px", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.4rem" }}>Cliente</p>
+                        {(order.customerFirstName || order.payerName) && (
+                          <p style={{ fontSize: "0.88rem", fontWeight: 500 }}>
+                            {order.customerFirstName ? `${order.customerFirstName} ${order.customerLastName ?? ""}`.trim() : order.payerName}
+                          </p>
+                        )}
+                        {order.customerDocument && (
+                          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                            <FileText size={12} /> CI: {order.customerDocument}
+                          </p>
+                        )}
+                        {order.customerPhone && (
+                          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                            <Phone size={12} />
+                            <a href={`https://wa.me/${order.customerPhone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
+                              style={{ color: "var(--whatsapp)", textDecoration: "none" }}>
+                              {order.customerPhone}
+                            </a>
+                          </p>
+                        )}
+                        {(order.customerEmail ?? order.payerEmail) && (
+                          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                            <Mail size={12} /> {order.customerEmail ?? order.payerEmail}
+                          </p>
+                        )}
+                        {!order.customerFirstName && !order.payerName && (
                           <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>No disponible aún</p>
                         )}
                       </div>
                     </div>
+
+                    {/* Envío */}
+                    {order.shippingMethod && (() => {
+                      const sm = SHIPPING_LABEL[order.shippingMethod];
+                      const sd = order.shippingData;
+                      return (
+                        <div style={{ paddingTop: "0.75rem", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                          <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "1px", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem" }}>Envío</p>
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem", flexWrap: "wrap" }}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.82rem", fontWeight: 600, color: "var(--accent-blue)", background: "rgba(59,130,246,0.1)", padding: "4px 10px", borderRadius: "99px" }}>
+                              <sm.Icon size={13} /> {sm.label}
+                            </span>
+                            {order.shippingCost > 0 && (
+                              <span style={{ fontSize: "0.82rem", color: "var(--warning, #f59e0b)", fontFamily: "var(--font-mono)" }}>
+                                ${order.shippingCost} al recibir
+                              </span>
+                            )}
+                            {order.shippingMethod === "PICKUP" && (
+                              <span style={{ fontSize: "0.82rem", color: "var(--success)" }}>Sin costo</span>
+                            )}
+                          </div>
+                          {sd?.zoneName && <p style={{ fontSize: "0.82rem", marginTop: 4, color: "var(--text-secondary)" }}>📍 Zona: {sd.zoneName}</p>}
+                          {sd?.address  && <p style={{ fontSize: "0.85rem", marginTop: 4 }}>{sd.address}</p>}
+                          {sd?.agency   && <p style={{ fontSize: "0.85rem", marginTop: 4 }}>Agencia: {sd.agency}</p>}
+                          {sd?.notes    && <p style={{ fontSize: "0.78rem", marginTop: 4, color: "var(--text-muted)" }}>📝 {sd.notes}</p>}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

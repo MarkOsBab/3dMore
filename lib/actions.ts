@@ -142,12 +142,18 @@ export async function deletePromoCode(id: string) {
   revalidatePath("/admin/promos");
 }
 
-export async function validatePromoCode(code: string): Promise<{ valid: boolean; discountPct?: number }> {
+export async function validatePromoCode(
+  code: string,
+  currentUserId?: string | null,
+): Promise<{ valid: boolean; discountPct?: number; message?: string }> {
   const promo = await prisma.promoCode.findUnique({ where: { code: code.toUpperCase() } });
 
-  if (!promo || !promo.isActive) return { valid: false };
-  if (promo.validUntil && new Date() > promo.validUntil) return { valid: false };
-  if (promo.usageLimit && promo.timesUsed >= promo.usageLimit) return { valid: false };
+  if (!promo || !promo.isActive) return { valid: false, message: "Código inválido" };
+  if (promo.validUntil && new Date() > promo.validUntil) return { valid: false, message: "Código expirado" };
+  if (promo.usageLimit && promo.timesUsed >= promo.usageLimit) return { valid: false, message: "Código agotado" };
+  if (promo.userId && promo.userId !== currentUserId) {
+    return { valid: false, message: "Este código es personal, no corresponde a tu cuenta." };
+  }
 
   return { valid: true, discountPct: promo.discountPct };
 }
