@@ -42,24 +42,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "La zona ya existe" }, { status: 409 });
   }
 }
-
-  const body = await req.json();
-  const { name, cost, sortOrder } = body;
-
-  if (!name || typeof cost !== "number") {
-    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
-  }
-
-  try {
-    const zone = await prisma.shippingZone.create({
-      data: {
-        name: String(name).trim(),
-        cost,
-        sortOrder: typeof sortOrder === "number" ? sortOrder : 0,
-      },
-    });
-    return NextResponse.json(zone);
-  } catch {
-    return NextResponse.json({ error: "La zona ya existe" }, { status: 409 });
-  }
-}
