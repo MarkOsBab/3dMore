@@ -23,6 +23,8 @@ export default function PromosClient({ initialPromos }: Props) {
   const [promos, setPromos] = useState<PromoCode[]>(initialPromos);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [exiting, setExiting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: "", discountPct: "10", validUntil: "", usageLimit: "100" });
 
@@ -54,8 +56,14 @@ export default function PromosClient({ initialPromos }: Props) {
 
   const handleDelete = async (id: string) => {
     if (!await confirm({ message: "¿Seguro que querés eliminar este código promocional?", title: "Eliminar código" })) return;
+    setDeleting(id);
     await deletePromoCode(id);
-    setPromos((p) => p.filter((x) => x.id !== id));
+    setDeleting(null);
+    setExiting(id);
+    setTimeout(() => {
+      setPromos((p) => p.filter((x) => x.id !== id));
+      setExiting(null);
+    }, 520);
   };
 
   const copyCode = (id: string, code: string) => {
@@ -198,9 +206,9 @@ export default function PromosClient({ initialPromos }: Props) {
             const pct = maxUses > 0 ? Math.min(100, (p.timesUsed / maxUses) * 100) : 0;
             const expired = p.validUntil ? new Date(p.validUntil) < new Date() : false;
             return (
+              <div key={p.id} className={exiting === p.id ? "admin-row-exit-wrapper" : ""}>
               <div
-                key={p.id}
-                className="glass admin-promo-card admin-row-in"
+                className={`glass admin-promo-card admin-row-in${exiting === p.id ? " admin-row-exiting" : ""}`}
                 style={{
                   borderRadius: "var(--radius-xl)",
                   padding: "1.25rem",
@@ -302,12 +310,14 @@ export default function PromosClient({ initialPromos }: Props) {
                     <button
                       aria-label="Eliminar"
                       onClick={() => handleDelete(p.id)}
-                      style={{ background: "transparent", color: "var(--danger)", cursor: "pointer" }}
+                      disabled={!!deleting}
+                      style={{ background: "transparent", border: "none", color: "var(--danger)", cursor: deleting === p.id ? "default" : "pointer", display: "inline-flex", alignItems: "center" }}
                     >
-                      <Trash2 size={15} />
+                      {deleting === p.id ? <span className="admin-delete-spinner" /> : <Trash2 size={15} />}
                     </button>
                   </div>
                 </div>
+              </div>
               </div>
             );
           })}

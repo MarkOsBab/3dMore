@@ -375,3 +375,35 @@ button:active:not(:disabled) { transform: scale(0.97); }
 }
 .admin-input::placeholder { color: rgba(255,255,255,0.22); }
 .admin-input option { background: #13131e; }
+
+/* ─── Delete row animations ─── */
+@keyframes admin-row-exit-slide {
+  0%   { transform: translateX(0); opacity: 1; background-color: transparent; }
+  10%  { background-color: rgba(239,68,68,0.28); border-color: rgba(239,68,68,0.5); box-shadow: inset 0 0 0 1px rgba(239,68,68,0.3), 0 0 24px rgba(239,68,68,0.15); }
+  28%  { background-color: rgba(239,68,68,0.06); transform: translateX(0); opacity: 1; }
+  68%  { transform: translateX(62px); opacity: 0; }
+  100% { transform: translateX(90px); opacity: 0; }
+}
+@keyframes admin-row-exit-collapse {
+  0%   { max-height: 200px; }
+  36%  { max-height: 200px; }
+  100% { max-height: 0; overflow: hidden; }
+}
+.admin-row-exit-wrapper {
+  animation: admin-row-exit-collapse 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  overflow: hidden;
+}
+.admin-row-exiting {
+  animation: admin-row-exit-slide 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+.admin-delete-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(239, 68, 68, 0.3);
+  border-top-color: #ef4444;
+  animation: spin 0.55s linear infinite;
+  flex-shrink: 0;
+}

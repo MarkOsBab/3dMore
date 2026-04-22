@@ -18,6 +18,8 @@ export default function AdminShippingPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [exiting, setExiting] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", cost: "", sortOrder: "" });
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ name: string; cost: string; sortOrder: string }>({ name: "", cost: "", sortOrder: "" });
@@ -84,8 +86,14 @@ export default function AdminShippingPage() {
 
   const remove = async (z: Zone) => {
     if (!await confirm({ message: `¿Seguro que querés eliminar la zona "${z.name}"?`, title: "Eliminar zona" })) return;
+    setRemoving(z.id);
     await fetch(`/api/shipping/zones/${z.id}`, { method: "DELETE" });
-    load();
+    setRemoving(null);
+    setExiting(z.id);
+    setTimeout(() => {
+      setZones((prev) => prev.filter((x) => x.id !== z.id));
+      setExiting(null);
+    }, 520);
   };
 
   return (
@@ -133,10 +141,11 @@ export default function AdminShippingPage() {
       ) : zones.length === 0 ? (
         <p style={{ padding: "2rem", textAlign: "center", color: "var(--text-secondary)" }}>No hay zonas configuradas.</p>
       ) : (
-        <div className="glass" style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <div className="glass" style={{ borderRadius: "var(--radius-lg)", border: "1px solid rgba(255,255,255,0.06)" }}>
           {zones.map((z) => (
-            <div key={z.id}
-              className="admin-row-in"
+            <div key={z.id} className={exiting === z.id ? "admin-row-exit-wrapper" : ""}>
+            <div
+              className={`admin-row-in${exiting === z.id ? " admin-row-exiting" : ""}`}
               style={{
                 display: "grid",
                 gridTemplateColumns: "2fr 1fr 1fr auto",
@@ -169,10 +178,12 @@ export default function AdminShippingPage() {
                       <Power size={14} />
                     </button>
                     <button onClick={() => startEdit(z)} style={{ ...iconBtn("var(--accent-blue)"), fontSize: "0.72rem", padding: "0.45rem 0.7rem" }}>Editar</button>
-                    <button onClick={() => remove(z)} style={iconBtn("var(--danger)")}><Trash2 size={14} /></button>
+                    <button onClick={() => remove(z)} disabled={!!removing} style={iconBtn("var(--danger)")}>                      {removing === z.id ? <span className="admin-delete-spinner" /> : <Trash2 size={14} />}
+                    </button>
                   </div>
                 </>
               )}
+            </div>
             </div>
           ))}
         </div>

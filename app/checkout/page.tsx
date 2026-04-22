@@ -142,17 +142,17 @@ export default function CheckoutPage() {
   };
 
   const payWithWhatsApp = () => {
-    // Los emojis se construyen desde sus bytes UTF-8 en ASCII puro para evitar
-    // cualquier corrupcion de encoding durante el bundling de webpack/Next.js
+    // TextDecoder + Uint8Array son APIs de runtime — imposible de optimizar en build time
+    const e = (bytes: number[]) => new TextDecoder().decode(new Uint8Array(bytes));
     const E = {
-      tag:    decodeURIComponent('%F0%9F%8F%B7'), // 🏷
-      money:  decodeURIComponent('%F0%9F%92%B0'), // 💰
-      house:  decodeURIComponent('%F0%9F%8F%A0'), // 🏠
-      box:    decodeURIComponent('%F0%9F%93%A6'), // 📦
-      store:  decodeURIComponent('%F0%9F%8F%AA'), // 🏪
-      memo:   decodeURIComponent('%F0%9F%93%9D'), // 📝
-      person: decodeURIComponent('%F0%9F%91%A4'), // 👤
-      mobile: decodeURIComponent('%F0%9F%93%B1'), // 📱
+      tag:    e([0xF0,0x9F,0x8F,0xB7]), // 🏷
+      money:  e([0xF0,0x9F,0x92,0xB0]), // 💰
+      house:  e([0xF0,0x9F,0x8F,0xA0]), // 🏠
+      box:    e([0xF0,0x9F,0x93,0xA6]), // 📦
+      store:  e([0xF0,0x9F,0x8F,0xAA]), // 🏪
+      memo:   e([0xF0,0x9F,0x93,0x9D]), // 📝
+      person: e([0xF0,0x9F,0x91,0xA4]), // 👤
+      mobile: e([0xF0,0x9F,0x93,0xB1]), // 📱
     };
 
     const orderText = items

@@ -29,6 +29,7 @@ export default function VariantForm({ productId, productName, productPrice, vari
   const alert = useAlert();
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [exitingId, setExitingId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [colorName, setColorName] = useState("");
   const [useCustomPrice, setUseCustomPrice] = useState(false);
@@ -68,12 +69,13 @@ export default function VariantForm({ productId, productName, productPrice, vari
   const handleDelete = async (variantId: string) => {
     if (!await confirm({ message: "¿Seguro que querés eliminar esta variante?", title: "Eliminar variante" })) return;
     setDeletingId(variantId);
-    try {
-      await deleteVariant(variantId, productId);
+    await deleteVariant(variantId, productId);
+    setDeletingId(null);
+    setExitingId(variantId);
+    setTimeout(() => {
+      setExitingId(null);
       onSaved();
-    } finally {
-      setDeletingId(null);
-    }
+    }, 520);
   };
 
   return (
@@ -112,8 +114,9 @@ export default function VariantForm({ productId, productName, productPrice, vari
                 const base = v.price ?? productPrice;
                 const final = v.isOffer && v.discountPct ? base * (1 - v.discountPct / 100) : base;
                 return (
+                  <div key={v.id} className={exitingId === v.id ? "admin-row-exit-wrapper" : ""}>
                   <div
-                    key={v.id}
+                    className={exitingId === v.id ? "admin-row-exiting" : ""}
                     style={{
                       display: "flex", alignItems: "center", gap: "0.75rem",
                       padding: "0.75rem", borderRadius: 10,
@@ -140,12 +143,13 @@ export default function VariantForm({ productId, productName, productPrice, vari
                     </div>
                     <button
                       onClick={() => handleDelete(v.id)}
-                      disabled={deletingId === v.id}
+                      disabled={!!deletingId}
                       className="admin-icon-btn danger"
                       style={{ opacity: deletingId === v.id ? 0.5 : 1 }}
                     >
-                      <Trash2 size={15} />
+                      {deletingId === v.id ? <span className="admin-delete-spinner" /> : <Trash2 size={15} />}
                     </button>
+                  </div>
                   </div>
                 );
               })}

@@ -39,6 +39,7 @@ export default function ProductsClient({ initialProducts }: Props) {
   const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [variantTarget, setVariantTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [exiting, setExiting] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/admin/products");
@@ -51,8 +52,12 @@ export default function ProductsClient({ initialProducts }: Props) {
     if (!await confirm({ message: "¿Seguro que querés eliminar este producto? Esta acción no se puede deshacer.", title: "Eliminar producto" })) return;
     setDeleting(id);
     await deleteProduct(id);
-    setProducts((p) => p.filter((x) => x.id !== id));
     setDeleting(null);
+    setExiting(id);
+    setTimeout(() => {
+      setProducts((p) => p.filter((x) => x.id !== id));
+      setExiting(null);
+    }, 520);
   };
 
   const handleToggleActive = async (p: Product) => {
@@ -96,9 +101,9 @@ export default function ProductsClient({ initialProducts }: Props) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
         {products.map((p, i) => (
+          <div key={p.id} className={exiting === p.id ? "admin-row-exit-wrapper" : ""}>
           <div
-            key={p.id}
-            className="glass admin-product-row admin-row-in"
+            className={`glass admin-product-row admin-row-in${exiting === p.id ? " admin-row-exiting" : ""}`}
             style={{
               borderRadius: "var(--radius-xl)",
               padding: "1rem 1.25rem",
@@ -203,14 +208,15 @@ export default function ProductsClient({ initialProducts }: Props) {
               </button>
               <button
                 title="Eliminar producto"
-                disabled={deleting === p.id}
+                disabled={!!deleting}
                 onClick={() => handleDelete(p.id)}
                 className="admin-icon-btn danger"
                 style={{ opacity: deleting === p.id ? 0.5 : 1 }}
               >
-                <Trash2 size={16} />
+                {deleting === p.id ? <span className="admin-delete-spinner" /> : <Trash2 size={16} />}
               </button>
             </div>
+          </div>
           </div>
         ))}
       </div>
