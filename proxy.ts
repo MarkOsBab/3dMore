@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
 import { updateSession } from "@/utils/supabase/middleware";
-import { adminSessionOptions, type AdminSessionData } from "@/lib/adminSession";
+import { getAdminSessionOptions, type AdminSessionData } from "@/lib/adminSession";
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -14,7 +14,7 @@ export async function proxy(req: NextRequest) {
     }
 
     const res = NextResponse.next();
-    const session = await getIronSession<AdminSessionData>(req, res, adminSessionOptions);
+    const session = await getIronSession<AdminSessionData>(req, res, getAdminSessionOptions());
 
     if (!session.isAdmin) {
       const loginUrl = req.nextUrl.clone();

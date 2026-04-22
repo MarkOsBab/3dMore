@@ -6,6 +6,7 @@ import CartModal from "../components/CartModal";
 import CartToast from "../components/CartToast";
 import { CartProvider } from "../lib/CartContext";
 import { AuthProvider } from "../lib/AuthContext";
+import PublicShell from "@/components/PublicShell";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -27,10 +28,12 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <CartProvider>
-            <Navbar />
+            <PublicShell>
+              <Navbar />
+              <CartModal />
+              <CartToast />
+            </PublicShell>
             {children}
-            <CartModal />
-            <CartToast />
           </CartProvider>
         </AuthProvider>
       </body>

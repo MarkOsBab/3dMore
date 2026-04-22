@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
 import { cookies } from "next/headers";
-import { adminSessionOptions, type AdminSessionData } from "@/lib/adminSession";
+import { getAdminSessionOptions, type AdminSessionData } from "@/lib/adminSession";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Usuario o contraseña incorrectos" }, { status: 401 });
   }
 
-  const session = await getIronSession<AdminSessionData>(await cookies(), adminSessionOptions);
+  const session = await getIronSession<AdminSessionData>(await cookies(), getAdminSessionOptions());
   session.isAdmin = true;
   await session.save();
 
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE() {
-  const session = await getIronSession<AdminSessionData>(await cookies(), adminSessionOptions);
+  const session = await getIronSession<AdminSessionData>(await cookies(), getAdminSessionOptions());
   session.destroy();
   return NextResponse.json({ ok: true });
 }

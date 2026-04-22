@@ -143,27 +143,28 @@ export default function CheckoutPage() {
 
   const payWithWhatsApp = () => {
     const orderText = items
-      .map((item) => `• ${item.quantity}x ${item.name}${item.variantColorName ? ` (${item.variantColorName})` : ""} — $${(getUnitPrice(item) * item.quantity).toFixed(0)}`)
+      .map((item) => `\u2022 ${item.quantity}x ${item.name}${item.variantColorName ? ` (${item.variantColorName})` : ""} \u2014 $${(getUnitPrice(item) * item.quantity).toFixed(0)}`)
       .join("\n");
     const shippingText =
-      shippingMethod === "HOME_MVD" ? `🏠 Envío a domicilio — ${selectedZone?.name}: ${address} ($${shippingCost} efectivo/transferencia al entregar)` :
-      shippingMethod === "AGENCY"   ? `📦 Envío por agencia DAC — ${agency} (pago al retirar)` :
-                                      `🏪 Retiro en domicilio del vendedor (a coordinar)`;
-    const msg = [
-      "¡Hola 3DMORE! Quiero hacer un pedido:",
+      shippingMethod === "HOME_MVD" ? `\uD83C\uDFE0 Env\u00edo a domicilio \u2014 ${selectedZone?.name}: ${address} ($${shippingCost} efectivo/transferencia al entregar)` :
+      shippingMethod === "AGENCY"   ? `\uD83D\uDCE6 Env\u00edo por agencia DAC \u2014 ${agency} (pago al retirar)` :
+                                      `\uD83C\uDFEA Retiro en domicilio del vendedor (a coordinar)`;
+    const lines: string[] = [
+      "\u00a1Hola 3DMORE! Quiero hacer un pedido:",
       "",
       orderText,
       "",
-      promoCode ? `🏷 Código: ${promoCode} (-${promoDiscount}%)` : "",
-      `💰 Total productos: $${total.toFixed(0)} UYU`,
-      "",
-      shippingText,
-      notes ? `📝 ${notes}` : "",
-      "",
-      `👤 ${form.firstName} ${form.lastName}`,
-      `📱 ${form.phone}  |  CI: ${form.documentId}`,
-    ].filter(Boolean).join("\n");
+    ];
+    if (promoCode) lines.push(`\uD83C\uDFF7 C\u00f3digo: ${promoCode} (-${promoDiscount}%)`);
+    lines.push(`\uD83D\uDCB0 Total productos: $${total.toFixed(0)} UYU`);
+    lines.push("");
+    lines.push(shippingText);
+    if (notes) lines.push(`\uD83D\uDCDD ${notes}`);
+    lines.push("");
+    lines.push(`\uD83D\uDC64 ${form.firstName} ${form.lastName}`);
+    lines.push(`\uD83D\uDCF1 ${form.phone}  |  CI: ${form.documentId}`);
 
+    const msg = lines.join("\n");
     const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") ?? "";
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
   };

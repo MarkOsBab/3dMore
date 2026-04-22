@@ -17,6 +17,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
 
+  // Login page: sin sidebar
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
+
   const handleLogout = async () => {
     await fetch("/api/admin/auth", { method: "DELETE" });
     router.push("/admin/login");
