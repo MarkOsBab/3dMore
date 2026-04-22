@@ -2,49 +2,55 @@ import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 
-export const maxDuration = 10;
+export const maxDuration = 60;
 
 /**
- * Mercado Pago webhook — recibe notificaciones de pago.
+ * Mercado Pago webhook.
+ * Responde 200 ANTES de procesar — evita timeouts de MP (5s).
+ * El procesamiento continúa en background (Vercel Node.js runtime).
  */
 export async function POST(req: Request) {
-  // Responder 200 siempre — ninguna excepción debe llegar a Vercel
+  let paymentId: string | undefined;
+
   try {
-    let body: { type?: string; data?: { id?: string } };
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ received: true });
+    const body = await req.json();
+    if (body?.type === "payment" && body?.data?.id) {
+      paymentId = String(body.data.id);
     }
+  } catch {
+    // body inválido, ignorar
+  }
 
-    const { type, data } = body;
-    if (type !== "payment" || !data?.id) {
-      return NextResponse.json({ received: true });
-    }
+  // Responder 200 a MP INMEDIATAMENTE — sin esperar ningún procesamiento
+  if (paymentId) {
+    // fire-and-forget: Vercel mantiene la función viva hasta que termine
+    void processPayment(paymentId);
+  }
 
-    const paymentId = data.id;
+  return NextResponse.json({ received: true });
+}
+
+async function processPayment(paymentId: string): Promise<void> {
+  try {
     const accessToken = process.env.MP_ACCESS_TOKEN;
     if (!accessToken) {
       console.error("[MP Webhook] MP_ACCESS_TOKEN no configurado");
-      return NextResponse.json({ received: true });
+      return;
     }
 
-    // Consultar el pago a la API de MP
     const client = new MercadoPagoConfig({ accessToken });
     const paymentApi = new Payment(client);
 
     let payment;
     try {
       payment = await paymentApi.get({ id: paymentId });
-    } catch (err: unknown) {
+    } catch (err) {
       console.error(`[MP Webhook] Error al obtener payment ${paymentId}:`, err);
-      return NextResponse.json({ received: true });
+      return;
     }
 
     const externalRef = payment.external_reference;
-    if (!externalRef) {
-      return NextResponse.json({ received: true });
-    }
+    if (!externalRef) return;
 
     const statusMap: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDING"> = {
       approved:   "APPROVED",
@@ -64,7 +70,7 @@ export async function POST(req: Request) {
 
     if (!existingOrder) {
       console.error(`[MP Webhook] Order no encontrada: mpExternalRef=${externalRef}`);
-      return NextResponse.json({ received: true });
+      return;
     }
 
     const order = await prisma.order.update({
@@ -89,11 +95,9 @@ export async function POST(req: Request) {
       await notifyWhatsApp(order);
     }
 
-    console.log(`[MP Webhook] OK payment=${paymentId} status=${newStatus} order=${order.id.slice(0, 8)}`);
-    return NextResponse.json({ received: true });
+    console.log(`[MP Webhook] OK payment=${paymentId} → ${newStatus} order=${order.id.slice(0, 8)}`);
   } catch (error) {
-    console.error("[MP Webhook] Error inesperado:", error);
-    return NextResponse.json({ received: true });
+    console.error("[MP Webhook] Error en processPayment:", error);
   }
 }
 
