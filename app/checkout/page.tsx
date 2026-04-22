@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   User, Truck, CreditCard, CheckCircle2, ChevronRight, ChevronLeft,
-  Home, Package, MapPin, Phone, FileText, Info, Trash2, Star,
+  Home, Package, MapPin, Phone, FileText, Info, Trash2, Star, Pencil,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useCart, getUnitPrice, type CartProduct } from "@/lib/CartContext";
@@ -210,6 +210,21 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleUpdateSavedAddress = (updated: SavedAddress) => {
+    setSavedAddresses((prev) => prev.map((a) => a.id === updated.id ? updated : a));
+    // Si está seleccionada, sincronizar el formulario activo también
+    if (selectedSavedId === updated.id) {
+      setZoneId(updated.zoneId);
+      setAddrForm({
+        street: updated.street,
+        doorNumber: updated.doorNumber,
+        corner: updated.corner ?? "",
+        neighborhood: updated.neighborhood,
+        postalCode: updated.postalCode ?? "",
+      });
+    }
+  };
+
   const payWithMP = async () => {
     setProcessingMP(true);
     try {
@@ -337,6 +352,7 @@ export default function CheckoutPage() {
                 selectedSavedId={selectedSavedId}
                 onSelectSaved={handleSelectSavedAddress}
                 onDeleteSaved={handleDeleteSavedAddress}
+                onUpdateSaved={handleUpdateSavedAddress}
                 saveAddress={saveAddress} setSaveAddress={setSaveAddress}
                 agency={agency} setAgency={setAgency}
                 notes={notes} setNotes={setNotes}
@@ -504,7 +520,38 @@ function StepProfile({ user, profile, form, setForm, signIn, onSave, saving }: a
 // ───────────────────────────────────────────────────────────────── STEP 2 — SHIPPING
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrForm, setAddrForm, savedAddresses, selectedSavedId, onSelectSaved, onDeleteSaved, saveAddress, setSaveAddress, agency, setAgency, notes, setNotes }: any) {
+function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrForm, setAddrForm, savedAddresses, selectedSavedId, onSelectSaved, onDeleteSaved, onUpdateSaved, saveAddress, setSaveAddress, agency, setAgency, notes, setNotes }: any) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emptyEditForm = { label: "", street: "", doorNumber: "", corner: "", neighborhood: "", postalCode: "", zoneId: "" };
+  const [editForm, setEditForm] = useState(emptyEditForm);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const startEdit = (addr: SavedAddress) => {
+    setEditingId(addr.id);
+    setEditForm({ label: addr.label ?? "", street: addr.street, doorNumber: addr.doorNumber, corner: addr.corner ?? "", neighborhood: addr.neighborhood, postalCode: addr.postalCode ?? "", zoneId: addr.zoneId });
+  };
+
+  const cancelEdit = () => { setEditingId(null); setEditForm(emptyEditForm); };
+
+  const saveEdit = async () => {
+    if (!editForm.street || !editForm.doorNumber || !editForm.neighborhood || !editForm.zoneId) return;
+    setSavingEdit(true);
+    try {
+      const zone = (zones as ShippingZone[]).find((z) => z.id === editForm.zoneId);
+      const res = await fetch(`/api/shipping/addresses/${editingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...editForm, zoneName: zone?.name ?? "" }),
+      });
+      if (!res.ok) { alert("Error al actualizar"); return; }
+      const updated = await res.json();
+      onUpdateSaved(updated);
+      cancelEdit();
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   return (
     <div>
       <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: 4 }}>¿Cómo querés recibir tu pedido?</h2>
@@ -554,41 +601,93 @@ function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrF
                 {savedAddresses.map((addr: SavedAddress) => {
                   const active = selectedSavedId === addr.id;
                   return (
-                    <div
-                      key={addr.id}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "0.75rem",
-                        padding: "0.85rem 1rem", borderRadius: "var(--radius-lg)", cursor: "pointer",
-                        background: active ? "rgba(255,42,133,0.08)" : "rgba(255,255,255,0.03)",
-                        border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`,
-                        transition: "all 0.2s",
-                      }}
-                      onClick={() => onSelectSaved(active ? null : addr)}
-                    >
-                      <div style={{
-                        width: 36, height: 36, flexShrink: 0, borderRadius: "var(--radius-md)",
-                        background: active ? "rgba(255,42,133,0.15)" : "rgba(255,255,255,0.05)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        color: active ? "var(--accent-pink)" : "var(--text-secondary)",
-                      }}>
-                        {addr.isDefault ? <Star size={16} /> : <Home size={16} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {addr.label && <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>{addr.label}</p>}
-                        <p style={{ fontSize: "0.88rem", fontWeight: 500 }}>
-                          {addr.street} {addr.doorNumber}{addr.corner ? ` esq. ${addr.corner}` : ""}
-                        </p>
-                        <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
-                          {addr.neighborhood}{addr.postalCode ? ` · CP ${addr.postalCode}` : ""} · {addr.zoneName}
-                        </p>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onDeleteSaved(addr.id); }}
-                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, flexShrink: 0 }}
-                        title="Eliminar dirección"
+                    <div key={addr.id} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                      <div
+                        style={{
+                          display: "flex", alignItems: "center", gap: "0.75rem",
+                          padding: "0.85rem 1rem", borderRadius: editingId === addr.id ? "var(--radius-lg) var(--radius-lg) 0 0" : "var(--radius-lg)", cursor: "pointer",
+                          background: active ? "rgba(255,42,133,0.08)" : "rgba(255,255,255,0.03)",
+                          border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`,
+                          borderBottom: editingId === addr.id ? "none" : undefined,
+                          transition: "all 0.2s",
+                        }}
+                        onClick={() => onSelectSaved(active ? null : addr)}
                       >
-                        <Trash2 size={15} />
-                      </button>
+                        <div style={{
+                          width: 36, height: 36, flexShrink: 0, borderRadius: "var(--radius-md)",
+                          background: active ? "rgba(255,42,133,0.15)" : "rgba(255,255,255,0.05)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          color: active ? "var(--accent-pink)" : "var(--text-secondary)",
+                        }}>
+                          {addr.isDefault ? <Star size={16} /> : <Home size={16} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {addr.label && <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>{addr.label}</p>}
+                          <p style={{ fontSize: "0.88rem", fontWeight: 500 }}>
+                            {addr.street} {addr.doorNumber}{addr.corner ? ` esq. ${addr.corner}` : ""}
+                          </p>
+                          <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                            {addr.neighborhood}{addr.postalCode ? ` · CP ${addr.postalCode}` : ""} · {addr.zoneName}
+                          </p>
+                        </div>
+                        <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); editingId === addr.id ? cancelEdit() : startEdit(addr); }}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: editingId === addr.id ? "var(--accent-pink)" : "var(--text-muted)", padding: 4 }}
+                            title={editingId === addr.id ? "Cancelar edición" : "Editar dirección"}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onDeleteSaved(addr.id); }}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}
+                            title="Eliminar dirección"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Formulario de edición inline */}
+                      {editingId === addr.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ padding: "1rem", background: "rgba(0,0,0,0.25)", borderRadius: "0 0 var(--radius-lg) var(--radius-lg)", border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`, borderTop: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", gap: "0.75rem" }}
+                        >
+                          <Field label="Etiqueta (opcional)" value={editForm.label} onChange={(v: string) => setEditForm({ ...editForm, label: v })} placeholder="Ej: Casa, Trabajo…" />
+                          <div>
+                            <label style={labelStyle}>Zona de entrega</label>
+                            <select value={editForm.zoneId} onChange={(e) => setEditForm({ ...editForm, zoneId: e.target.value })} className="admin-input">
+                              <option value="">Seleccioná una zona</option>
+                              {(zones as ShippingZone[]).map((z) => <option key={z.id} value={z.id}>{z.name} — ${z.cost}</option>)}
+                            </select>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+                            <Field label="Calle" value={editForm.street} onChange={(v: string) => setEditForm({ ...editForm, street: v })} placeholder="Ej: Av. 18 de Julio" />
+                            <Field label="Nro. puerta" value={editForm.doorNumber} onChange={(v: string) => setEditForm({ ...editForm, doorNumber: v })} placeholder="Ej: 1234 apto 5" />
+                          </div>
+                          <Field label="Esquina (opcional)" value={editForm.corner} onChange={(v: string) => setEditForm({ ...editForm, corner: v })} placeholder="Ej: Yaguarón" />
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.65rem" }}>
+                            <Field label="Barrio" value={editForm.neighborhood} onChange={(v: string) => setEditForm({ ...editForm, neighborhood: v })} placeholder="Ej: Centro" />
+                            <Field label="Código postal (opcional)" value={editForm.postalCode} onChange={(v: string) => setEditForm({ ...editForm, postalCode: v })} placeholder="Ej: 11000" />
+                          </div>
+                          <div style={{ display: "flex", gap: "0.5rem", paddingTop: 2 }}>
+                            <button
+                              onClick={saveEdit}
+                              disabled={savingEdit || !editForm.street || !editForm.doorNumber || !editForm.neighborhood || !editForm.zoneId}
+                              style={{ padding: "0.55rem 1.1rem", background: "var(--accent-pink)", color: "white", border: "none", borderRadius: "var(--radius-pill)", cursor: "pointer", fontWeight: 600, fontSize: "0.82rem", opacity: savingEdit || !editForm.street || !editForm.doorNumber || !editForm.neighborhood || !editForm.zoneId ? 0.45 : 1, display: "flex", alignItems: "center", gap: 6 }}
+                            >
+                              {savingEdit ? <><span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} /> Guardando…</> : "Guardar cambios"}
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              style={{ padding: "0.55rem 0.9rem", background: "transparent", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-pill)", cursor: "pointer", fontSize: "0.82rem" }}
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

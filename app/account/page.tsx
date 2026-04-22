@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   User as UserIcon, Package, Tag, LogOut, Save,
   CheckCircle, Clock, XCircle, ChevronLeft, Copy,
-  MapPin, Home, Star, Trash2, Plus, X, Info,
+  MapPin, Home, Star, Trash2, Plus, X, Info, Pencil,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
@@ -62,6 +62,7 @@ export default function AccountPage() {
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [zones, setZones] = useState<ShippingZone[]>([]);
   const [showAddrForm, setShowAddrForm] = useState(false);
+  const [editingAddrId, setEditingAddrId] = useState<string | null>(null);
   const [deletingAddr, setDeletingAddr] = useState<string | null>(null);
   const [savingAddr, setSavingAddr] = useState(false);
   const emptyAddr = { label: "", street: "", doorNumber: "", corner: "", neighborhood: "", postalCode: "", zoneId: "" };
@@ -127,14 +128,27 @@ export default function AccountPage() {
     setSavingAddr(true);
     try {
       const zone = zones.find((z) => z.id === addrForm.zoneId);
-      const res = await fetch("/api/shipping/addresses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...addrForm, zoneName: zone?.name ?? "" }),
-      });
-      if (!res.ok) { alert("Error al guardar la dirección"); return; }
-      const saved = await res.json();
-      setAddresses((prev) => [...prev, saved]);
+      const body = { ...addrForm, zoneName: zone?.name ?? "" };
+      if (editingAddrId) {
+        const res = await fetch(`/api/shipping/addresses/${editingAddrId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) { alert("Error al actualizar la dirección"); return; }
+        const updated = await res.json();
+        setAddresses((prev) => prev.map((a) => a.id === editingAddrId ? updated : a));
+        setEditingAddrId(null);
+      } else {
+        const res = await fetch("/api/shipping/addresses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) { alert("Error al guardar la dirección"); return; }
+        const saved = await res.json();
+        setAddresses((prev) => [...prev, saved]);
+      }
       setAddrForm(emptyAddr);
       setShowAddrForm(false);
     } finally {
@@ -322,6 +336,25 @@ export default function AccountPage() {
                   </p>
                 </div>
                 <button
+                  onClick={() => {
+                    setEditingAddrId(addr.id);
+                    setAddrForm({
+                      label: addr.label ?? "",
+                      street: addr.street,
+                      doorNumber: addr.doorNumber,
+                      corner: addr.corner ?? "",
+                      neighborhood: addr.neighborhood,
+                      postalCode: addr.postalCode ?? "",
+                      zoneId: addr.zoneId,
+                    });
+                    setShowAddrForm(true);
+                  }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0.35rem", flexShrink: 0 }}
+                  title="Editar"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
                   onClick={() => handleDeleteAddr(addr.id)}
                   disabled={deletingAddr === addr.id}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0.35rem", flexShrink: 0 }}
@@ -339,8 +372,8 @@ export default function AccountPage() {
           {showAddrForm && (
             <div style={{ marginTop: addresses.length > 0 ? "1rem" : 0, padding: "1.25rem", background: "rgba(255,255,255,0.03)", borderRadius: "var(--radius-lg)", border: "1px solid rgba(255,255,255,0.09)", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <p style={{ fontWeight: 700, fontSize: "0.95rem" }}>Nueva dirección</p>
-                <button onClick={() => { setShowAddrForm(false); setAddrForm(emptyAddr); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}>
+                <p style={{ fontWeight: 700, fontSize: "0.95rem" }}>{editingAddrId ? "Editar dirección" : "Nueva dirección"}</p>
+                <button onClick={() => { setShowAddrForm(false); setAddrForm(emptyAddr); setEditingAddrId(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}>
                   <X size={17} />
                 </button>
               </div>
@@ -374,10 +407,10 @@ export default function AccountPage() {
                   disabled={!canSaveAddr || savingAddr}
                   style={{ display: "flex", alignItems: "center", gap: 6, padding: "0.7rem 1.3rem", background: "var(--accent-pink)", color: "white", border: "none", borderRadius: "var(--radius-pill)", cursor: canSaveAddr && !savingAddr ? "pointer" : "default", fontWeight: 600, fontSize: "0.88rem", opacity: !canSaveAddr || savingAddr ? 0.45 : 1 }}
                 >
-                  {savingAddr ? <><span className="spinner" style={{ width: 13, height: 13, borderWidth: 2 }} /> Guardando…</> : "Guardar dirección"}
+                  {savingAddr ? <><span className="spinner" style={{ width: 13, height: 13, borderWidth: 2 }} /> Guardando…</> : editingAddrId ? "Guardar cambios" : "Guardar dirección"}
                 </button>
                 <button
-                  onClick={() => { setShowAddrForm(false); setAddrForm(emptyAddr); }}
+                  onClick={() => { setShowAddrForm(false); setAddrForm(emptyAddr); setEditingAddrId(null); }}
                   style={{ padding: "0.7rem 1.1rem", background: "transparent", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-pill)", cursor: "pointer", fontSize: "0.88rem" }}
                 >
                   Cancelar
