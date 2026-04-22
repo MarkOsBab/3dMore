@@ -6,6 +6,13 @@ import { getAdminSessionOptions, type AdminSessionData } from "@/lib/adminSessio
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // ── Webhooks externos: nunca interceptar ──────────────────────────────────
+  // Los webhooks (MP, etc) no tienen cookies, no necesitan refrescar sesión
+  // y cualquier latencia extra puede causar timeouts.
+  if (pathname.startsWith("/api/webhooks")) {
+    return NextResponse.next();
+  }
+
   // ── Protección del panel admin ────────────────────────────────────────────
   if (pathname.startsWith("/admin")) {
     // La página de login y su API nunca se protegen (evita loop)
@@ -31,6 +38,6 @@ export async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
