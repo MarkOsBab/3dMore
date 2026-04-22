@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { sendOrderConfirmedBuyer, sendOrderConfirmedAdmin } from "@/lib/email";
 
 export const maxDuration = 30;
 
@@ -12,6 +13,38 @@ const STATUS_MAP: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDIN
   in_process: "PENDING",
   authorized: "PENDING",
 };
+
+async function issueLoyaltyPromo(orderId: string) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { userId: true, loyaltyPromoIssued: true },
+    });
+    if (!order?.userId || order.loyaltyPromoIssued) return;
+
+    const code = `VIP-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+    const validUntil = new Date();
+    validUntil.setMonth(validUntil.getMonth() + 3);
+
+    await prisma.promoCode.create({
+      data: {
+        code,
+        discountPct: 10,
+        validUntil,
+        userId: order.userId,
+        isActive: true,
+        usageLimit: 1,
+      },
+    });
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { loyaltyPromoIssued: true },
+    });
+    console.log(`[Loyalty] Emitido ${code} para pedido ${orderId}`);
+  } catch (err) {
+    console.error("[Loyalty] Error al emitir promo:", err);
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -81,13 +114,26 @@ export async function POST(req: Request) {
 
     const existing = await prisma.order.findUnique({
       where: { mpExternalRef: externalRef },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        total: true,
+        items: true,
+        shippingMethod: true,
+        shippingData: true,
+        customerFirstName: true,
+        customerLastName: true,
+        customerEmail: true,
+        customerPhone: true,
+      },
     });
 
     if (!existing) {
       console.error(`[MP Webhook] Order no encontrada: ${externalRef}`);
       return NextResponse.json({ received: true });
     }
+
+    const wasAlreadyApproved = existing.status === "APPROVED";
 
     await prisma.order.update({
       where: { mpExternalRef: externalRef },
@@ -104,6 +150,23 @@ export async function POST(req: Request) {
       await prisma.orderStatusHistory.create({
         data: { orderId: existing.id, status: newStatus },
       });
+    }
+
+    // Notificaciones y promo solo la primera vez que se aprueba
+    if (newStatus === "APPROVED" && !wasAlreadyApproved) {
+      const orderForEmail = {
+        ...existing,
+        mpPaymentId: String(payment.id),
+        payerEmail: payment.payer?.email ?? null,
+        payerName: [payment.payer?.first_name, payment.payer?.last_name]
+          .filter(Boolean).join(" ") || null,
+      };
+
+      await Promise.allSettled([
+        sendOrderConfirmedBuyer(orderForEmail),
+        sendOrderConfirmedAdmin(orderForEmail),
+        issueLoyaltyPromo(existing.id),
+      ]);
     }
 
     console.log(`[MP Webhook] OK payment=${paymentId} → ${newStatus}`);
