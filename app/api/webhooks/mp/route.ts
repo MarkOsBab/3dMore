@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { prisma } from "@/lib/prisma";
@@ -6,86 +7,99 @@ const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN!,
 });
 
+export const maxDuration = 60;
+
 /**
  * Mercado Pago webhook — recibe notificaciones de pago.
- * Configurar en el panel de MP: Desarrolladores → Webhooks
- * URL: https://tu-dominio.com/api/webhooks/mp
+ * Responde 200 inmediatamente a MP y procesa en background con after().
  */
 export async function POST(req: Request) {
+  let body: { type?: string; data?: { id?: string } };
   try {
-    const body = await req.json();
-    const { type, data } = body;
-
-    if (type !== "payment" || !data?.id) {
-      return NextResponse.json({ received: true });
-    }
-
-    const paymentApi = new Payment(client);
-    let payment;
-    try {
-      payment = await paymentApi.get({ id: data.id });
-    } catch (err: unknown) {
-      const mpErr = err as { status?: number };
-      if (mpErr?.status === 404) {
-        console.log(`[MP Webhook] Payment ${data.id} no encontrado (simulación o ID inválido)`);
-        return NextResponse.json({ received: true });
-      }
-      throw err;
-    }
-
-    const externalRef = payment.external_reference;
-    if (!externalRef) {
-      return NextResponse.json({ received: true });
-    }
-
-    // Mapa de status MP → OrderStatus
-    const statusMap: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDING"> = {
-      approved:    "APPROVED",
-      rejected:    "REJECTED",
-      cancelled:   "CANCELLED",
-      refunded:    "CANCELLED",
-      pending:     "PENDING",
-      in_process:  "PENDING",
-      authorized:  "PENDING",
-    };
-
-    const newStatus = statusMap[payment.status ?? ""] ?? "PENDING";
-
-    // Actualizar el Order en BD
-    const existingOrder = await prisma.order.findUnique({
-      where: { mpExternalRef: externalRef },
-      select: { id: true, status: true },
-    });
-
-    const order = await prisma.order.update({
-      where: { mpExternalRef: externalRef },
-      data: {
-        status: newStatus,
-        mpPaymentId: String(payment.id),
-        payerEmail: payment.payer?.email ?? null,
-        payerName: [payment.payer?.first_name, payment.payer?.last_name]
-          .filter(Boolean).join(" ") || null,
-      },
-    });
-
-    // Registrar cambio de estado solo si realmente cambió
-    if (existingOrder && existingOrder.status !== newStatus) {
-      await prisma.orderStatusHistory.create({
-        data: { orderId: order.id, status: newStatus },
-      });
-    }
-
-    // Solo notificar por WhatsApp cuando se aprueba
-    if (newStatus === "APPROVED") {
-      await issueLoyaltyPromoIfNeeded(order.id);
-      await notifyWhatsApp(order);
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("[MP Webhook] Error:", error);
+    body = await req.json();
+  } catch {
     return NextResponse.json({ received: true });
   }
+
+  const { type, data } = body;
+
+  if (type !== "payment" || !data?.id) {
+    return NextResponse.json({ received: true });
+  }
+
+  const paymentId = data.id;
+
+  // Responder 200 a MP de inmediato para evitar timeouts y reintentos
+  after(async () => {
+    try {
+      const paymentApi = new Payment(client);
+      let payment;
+      try {
+        payment = await paymentApi.get({ id: paymentId });
+      } catch (err: unknown) {
+        const mpErr = err as { status?: number };
+        console.error(`[MP Webhook] Error fetching payment ${paymentId}:`, mpErr?.status, err);
+        return;
+      }
+
+      const externalRef = payment.external_reference;
+      if (!externalRef) {
+        console.log(`[MP Webhook] Payment ${paymentId} sin external_reference, ignorado`);
+        return;
+      }
+
+      // Mapa de status MP → OrderStatus
+      const statusMap: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDING"> = {
+        approved:   "APPROVED",
+        rejected:   "REJECTED",
+        cancelled:  "CANCELLED",
+        refunded:   "CANCELLED",
+        pending:    "PENDING",
+        in_process: "PENDING",
+        authorized: "PENDING",
+      };
+
+      const newStatus = statusMap[payment.status ?? ""] ?? "PENDING";
+
+      const existingOrder = await prisma.order.findUnique({
+        where: { mpExternalRef: externalRef },
+        select: { id: true, status: true },
+      });
+
+      if (!existingOrder) {
+        console.error(`[MP Webhook] No se encontró order con mpExternalRef=${externalRef}`);
+        return;
+      }
+
+      const order = await prisma.order.update({
+        where: { mpExternalRef: externalRef },
+        data: {
+          status: newStatus,
+          mpPaymentId: String(payment.id),
+          payerEmail: payment.payer?.email ?? null,
+          payerName: [payment.payer?.first_name, payment.payer?.last_name]
+            .filter(Boolean).join(" ") || null,
+        },
+      });
+
+      if (existingOrder.status !== newStatus) {
+        await prisma.orderStatusHistory.create({
+          data: { orderId: order.id, status: newStatus },
+        });
+      }
+
+      if (newStatus === "APPROVED") {
+        await issueLoyaltyPromoIfNeeded(order.id);
+        await notifyWhatsApp(order);
+      }
+
+      console.log(`[MP Webhook] Payment ${paymentId} procesado → ${newStatus} (order ${order.id.slice(0, 8)})`);
+    } catch (error) {
+      console.error("[MP Webhook] Error en procesamiento:", error);
+    }
+  });
+
+  return NextResponse.json({ received: true });
 }
 
 async function notifyWhatsApp(order: {
