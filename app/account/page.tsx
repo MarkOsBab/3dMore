@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
-type Status = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+type Status = "PENDING" | "APPROVED" | "CONFIRMED" | "READY_FOR_DELIVERY" | "DELIVERED" | "REJECTED" | "CANCELLED";
 
 interface SavedAddress {
   id: string;
@@ -425,12 +425,17 @@ export default function AccountPage() {
 }
 
 function OrderCard({ order }: { order: OrderRow }) {
-  const statusMeta = {
-    APPROVED:  { color: "var(--success)",           bg: "rgba(34,197,94,0.1)",  icon: CheckCircle, label: "Aprobado"  },
-    PENDING:   { color: "var(--warning, #f59e0b)",  bg: "rgba(245,158,11,0.1)", icon: Clock,       label: "Pendiente" },
-    REJECTED:  { color: "var(--danger)",            bg: "rgba(239,68,68,0.1)",  icon: XCircle,     label: "Rechazado" },
-    CANCELLED: { color: "var(--text-muted)",        bg: "rgba(255,255,255,0.04)", icon: XCircle,   label: "Cancelado" },
-  }[order.status];
+  const statusMeta = ({
+    APPROVED:           { color: "var(--success)",             bg: "rgba(34,197,94,0.1)",    icon: CheckCircle, label: "Pago confirmado"     },
+    PENDING:            { color: "var(--warning, #f59e0b)",    bg: "rgba(245,158,11,0.1)",   icon: Clock,       label: "Pendiente"           },
+    CONFIRMED:          { color: "var(--accent-blue)",         bg: "rgba(59,130,246,0.1)",   icon: Package,     label: "En proceso"          },
+    READY_FOR_DELIVERY: { color: "#34d399",                    bg: "rgba(52,211,153,0.1)",   icon: CheckCircle, label: "Listo para entrega"  },
+    DELIVERED:          { color: "var(--success)",             bg: "rgba(34,197,94,0.1)",    icon: CheckCircle, label: "Entregado"           },
+    REJECTED:           { color: "var(--danger)",              bg: "rgba(239,68,68,0.1)",    icon: XCircle,     label: "Rechazado"           },
+    CANCELLED:          { color: "var(--text-muted)",          bg: "rgba(255,255,255,0.04)", icon: XCircle,     label: "Cancelado"           },
+  } as Record<string, { color: string; bg: string; icon: React.ElementType; label: string }>)[order.status] ?? {
+    color: "var(--text-muted)", bg: "rgba(255,255,255,0.04)", icon: Clock, label: order.status,
+  };
   const Icon = statusMeta.icon;
 
   const shippingLabel = {
