@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import {
-  Tag, Plus, Pencil, Trash2, Check, X, Power, GripVertical,
+  Tag, Plus, Pencil, Trash2, Check, X, Power, GripVertical, Search,
 } from "lucide-react";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 15;
 
 interface Category {
   id: string;
@@ -29,6 +32,9 @@ export default function CategoriesClient() {
 
   // Delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "HIDDEN">("ALL");
+  const [page, setPage] = useState(1);
 
   const load = async () => {
     setLoading(true);
@@ -84,6 +90,16 @@ export default function CategoriesClient() {
     load();
   };
 
+  const q = search.toLowerCase().trim();
+  const filtered = categories.filter((c) => {
+    if (filterStatus === "ACTIVE" && !c.isActive) return false;
+    if (filterStatus === "HIDDEN" && c.isActive) return false;
+    if (q && !c.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div style={{ padding: "2rem" }}>
       {/* Header */}
@@ -135,6 +151,29 @@ export default function CategoriesClient() {
         </div>
       </div>
 
+      {/* Filtros + búsqueda */}
+      <div style={{ display: "flex", gap: "0.65rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: "1 1 200px" }}>
+          <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+          <input
+            className="admin-input"
+            placeholder="Buscar categoría…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{ paddingLeft: 36 }}
+          />
+        </div>
+        {(["ALL", "ACTIVE", "HIDDEN"] as const).map((s) => {
+          const label = s === "ALL" ? "Todas" : s === "ACTIVE" ? "Activas" : "Ocultas";
+          const active = filterStatus === s;
+          return (
+            <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }} style={{ padding: "0.4rem 0.9rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(255,42,133,0.08)" : "transparent", color: active ? "var(--accent-pink)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400 }}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* List */}
       {loading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "3rem" }}>
@@ -145,9 +184,15 @@ export default function CategoriesClient() {
           <Tag size={32} style={{ marginBottom: "1rem", opacity: 0.3 }} />
           <p>No hay categorías aún. Creá la primera arriba.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <div className="glass" style={{ padding: "3rem", textAlign: "center", borderRadius: "var(--radius-xl)", border: "1px solid rgba(255,255,255,0.06)", color: "var(--text-secondary)" }}>
+          <Tag size={32} style={{ marginBottom: "1rem", opacity: 0.3 }} />
+          <p>Sin resultados para esa búsqueda.</p>
+        </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          {categories.map((cat) => (
+        <>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {paginated.map((cat) => (
             <div
               key={cat.id}
               className="admin-row-in glass"
@@ -229,7 +274,9 @@ export default function CategoriesClient() {
               )}
             </div>
           ))}
-        </div>
+          </div>
+          <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
+        </>
       )}
 
       {/* Delete confirm modal */}

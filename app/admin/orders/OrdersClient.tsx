@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingBag, CheckCircle, Clock, XCircle, ChevronDown, ChevronUp, RefreshCcw, Home, Package, MapPin, Phone, FileText, Mail } from "lucide-react";
+import { ShoppingBag, CheckCircle, Clock, XCircle, ChevronDown, ChevronUp, RefreshCcw, Home, Package, MapPin, Phone, FileText, Mail, Search } from "lucide-react";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 
 type OrderStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
@@ -68,6 +71,8 @@ export default function OrdersClient({ initialOrders }: Props) {
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filter, setFilter] = useState<OrderStatus | "ALL">("ALL");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
@@ -77,7 +82,17 @@ export default function OrdersClient({ initialOrders }: Props) {
     setRefreshing(false);
   };
 
-  const filtered = filter === "ALL" ? orders : orders.filter((o) => o.status === filter);
+  const q = search.toLowerCase().trim();
+  const filtered = orders.filter((o) => {
+    if (filter !== "ALL" && o.status !== filter) return false;
+    if (!q) return true;
+    const name = `${o.customerFirstName ?? ""} ${o.customerLastName ?? ""} ${o.payerName ?? ""}`.toLowerCase();
+    const email = (o.customerEmail ?? o.payerEmail ?? "").toLowerCase();
+    return name.includes(q) || email.includes(q) || o.id.toLowerCase().startsWith(q);
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const counts = {
     ALL:       orders.length,
@@ -116,6 +131,18 @@ export default function OrdersClient({ initialOrders }: Props) {
         </button>
       </div>
 
+      {/* Búsqueda */}
+      <div style={{ position: "relative", marginBottom: "1rem" }}>
+        <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+        <input
+          className="admin-input"
+          placeholder="Buscar por nombre, email o ID…"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          style={{ paddingLeft: 36 }}
+        />
+      </div>
+
       {/* Filtros */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         {(["ALL", "APPROVED", "PENDING", "REJECTED", "CANCELLED"] as const).map((s) => {
@@ -124,7 +151,7 @@ export default function OrdersClient({ initialOrders }: Props) {
           return (
             <button
               key={s}
-              onClick={() => setFilter(s)}
+              onClick={() => { setFilter(s); setPage(1); }}
               style={{
                 padding: "0.4rem 0.9rem", borderRadius: "var(--radius-pill)",
                 border: `1px solid ${active ? (cfg?.color ?? "rgba(255,255,255,0.3)") : "rgba(255,255,255,0.08)"}`,
@@ -147,11 +174,11 @@ export default function OrdersClient({ initialOrders }: Props) {
           style={{ textAlign: "center", padding: "4rem", borderRadius: "var(--radius-xl)", color: "var(--text-secondary)", border: "1px dashed rgba(255,255,255,0.1)" }}
         >
           <ShoppingBag size={40} color="var(--text-muted)" style={{ margin: "0 auto 1rem" }} />
-          <p style={{ fontWeight: 500 }}>Sin pedidos{filter !== "ALL" ? ` ${STATUS_CONFIG[filter].label.toLowerCase()}s` : ""}</p>
+          <p style={{ fontWeight: 500 }}>{q ? "Sin resultados para esa búsqueda" : `Sin pedidos${filter !== "ALL" ? ` ${STATUS_CONFIG[filter].label.toLowerCase()}s` : ""}`}</p>
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-          {filtered.map((order, i) => {
+          {paginated.map((order, i) => {
             const cfg = STATUS_CONFIG[order.status];
             const isOpen = expanded === order.id;
             const items = (Array.isArray(order.items) ? order.items : []) as OrderItem[];
@@ -332,6 +359,7 @@ export default function OrdersClient({ initialOrders }: Props) {
           })}
         </div>
       )}
+      <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
     </div>
   );
 }

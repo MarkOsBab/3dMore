@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Trash2, Plus, Layers, Package, Pencil } from "lucide-react";
+import { Trash2, Plus, Layers, Package, Pencil, Search } from "lucide-react";
 import { deleteProduct, updateProduct } from "@/lib/actions";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import ProductForm from "@/components/admin/ProductForm";
 import VariantForm from "@/components/admin/VariantForm";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 10;
 
 interface Variant {
   id: string;
@@ -40,6 +43,10 @@ export default function ProductsClient({ initialProducts }: Props) {
   const [variantTarget, setVariantTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [exiting, setExiting] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "HIDDEN">("ALL");
+  const [filterOffer, setFilterOffer] = useState<"ALL" | "OFFER" | "REGULAR">("ALL");
+  const [page, setPage] = useState(1);
 
   const refresh = useCallback(async () => {
     const res = await fetch("/api/admin/products");
@@ -47,6 +54,20 @@ export default function ProductsClient({ initialProducts }: Props) {
     setProducts(data);
     setVariantTarget((prev) => prev ? data.find((p) => p.id === prev.id) ?? null : null);
   }, []);
+
+  const resetFilters = () => { setSearch(""); setFilterStatus("ALL"); setFilterOffer("ALL"); setPage(1); };
+
+  const q = search.toLowerCase().trim();
+  const filtered = products.filter((p) => {
+    if (filterStatus === "ACTIVE" && !p.isActive) return false;
+    if (filterStatus === "HIDDEN" && p.isActive) return false;
+    if (filterOffer === "OFFER" && !p.isOffer) return false;
+    if (filterOffer === "REGULAR" && p.isOffer) return false;
+    if (q && !p.name.toLowerCase().includes(q) && !(p.category?.name.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleDelete = async (id: string) => {
     if (!await confirm({ message: "¿Seguro que querés eliminar este producto? Esta acción no se puede deshacer.", title: "Eliminar producto" })) return;
@@ -82,7 +103,44 @@ export default function ProductsClient({ initialProducts }: Props) {
         </button>
       </div>
 
-      {products.length === 0 && (
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: "1 1 240px" }}>
+          <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+          <input
+            className="admin-input"
+            placeholder="Buscar por nombre o categoría…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{ paddingLeft: 36 }}
+          />
+        </div>
+        {(["ALL", "ACTIVE", "HIDDEN"] as const).map((s) => {
+          const label = s === "ALL" ? "Todos" : s === "ACTIVE" ? "Activos" : "Ocultos";
+          const active = filterStatus === s;
+          return (
+            <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }} style={{ padding: "0.4rem 0.9rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(59,130,246,0.1)" : "transparent", color: active ? "var(--accent-blue)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400 }}>
+              {label}
+            </button>
+          );
+        })}
+        {(["ALL", "OFFER", "REGULAR"] as const).map((s) => {
+          const label = s === "ALL" ? "Todas" : s === "OFFER" ? "En oferta" : "Sin oferta";
+          const active = filterOffer === s;
+          return (
+            <button key={s} onClick={() => { setFilterOffer(s); setPage(1); }} style={{ padding: "0.4rem 0.9rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(255,42,133,0.08)" : "transparent", color: active ? "var(--accent-pink)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400 }}>
+              {label}
+            </button>
+          );
+        })}
+        {(q || filterStatus !== "ALL" || filterOffer !== "ALL") && (
+          <button onClick={resetFilters} style={{ padding: "0.4rem 0.75rem", borderRadius: "var(--radius-pill)", border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.78rem" }}>
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
         <div
           className="glass"
           style={{
@@ -94,13 +152,13 @@ export default function ProductsClient({ initialProducts }: Props) {
           }}
         >
           <Package size={40} color="var(--text-muted)" style={{ margin: "0 auto 1rem" }} />
-          <p style={{ fontWeight: 500 }}>Sin productos todavía</p>
+          <p style={{ fontWeight: 500 }}>{q ? "Sin resultados para esa búsqueda" : "Sin productos todavía"}</p>
           <p style={{ fontSize: "0.85rem", marginTop: 4 }}>Creá el primero con el botón de arriba.</p>
         </div>
-      )}
+      ) : null}
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-        {products.map((p, i) => (
+        {paginated.map((p, i) => (
           <div key={p.id} className={exiting === p.id ? "admin-row-exit-wrapper" : ""}>
           <div
             className={`glass admin-product-row admin-row-in${exiting === p.id ? " admin-row-exiting" : ""}`}
@@ -220,6 +278,7 @@ export default function ProductsClient({ initialProducts }: Props) {
           </div>
         ))}
       </div>
+      <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
 
       {showCreate && (
         <ProductForm onClose={() => setShowCreate(false)} onSaved={refresh} />

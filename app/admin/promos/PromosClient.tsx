@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { createPromoCode, togglePromoCode, deletePromoCode } from "@/lib/actions";
-import { Plus, Trash2, Copy, Check, Tag } from "lucide-react";
+import { Plus, Trash2, Copy, Check, Tag, Search } from "lucide-react";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
+import Pagination from "@/components/admin/Pagination";
+
+const PAGE_SIZE = 12;
 
 interface PromoCode {
   id: string;
@@ -27,6 +30,9 @@ export default function PromosClient({ initialPromos }: Props) {
   const [exiting, setExiting] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [form, setForm] = useState({ code: "", discountPct: "10", validUntil: "", usageLimit: "100" });
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "INACTIVE" | "EXPIRED">("ALL");
+  const [page, setPage] = useState(1);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,6 +77,18 @@ export default function PromosClient({ initialPromos }: Props) {
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1200);
   };
+
+  const q = search.toLowerCase().trim();
+  const now = new Date();
+  const filtered = promos.filter((p) => {
+    if (filterStatus === "ACTIVE" && !p.isActive) return false;
+    if (filterStatus === "INACTIVE" && p.isActive) return false;
+    if (filterStatus === "EXPIRED" && !(p.validUntil && new Date(p.validUntil) < now)) return false;
+    if (q && !p.code.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   return (
     <div>
@@ -177,8 +195,31 @@ export default function PromosClient({ initialPromos }: Props) {
       )}
 
 
+      {/* Filtros */}
+      <div style={{ display: "flex", gap: "0.65rem", marginBottom: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: "1 1 200px" }}>
+          <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
+          <input
+            className="admin-input"
+            placeholder="Buscar código…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            style={{ paddingLeft: 36 }}
+          />
+        </div>
+        {(["ALL", "ACTIVE", "INACTIVE", "EXPIRED"] as const).map((s) => {
+          const label = { ALL: "Todos", ACTIVE: "Activos", INACTIVE: "Inactivos", EXPIRED: "Vencidos" }[s];
+          const active = filterStatus === s;
+          return (
+            <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }} style={{ padding: "0.4rem 0.9rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(255,42,133,0.08)" : "transparent", color: active ? "var(--accent-pink)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400 }}>
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Card grid */}
-      {promos.length === 0 ? (
+      {filtered.length === 0 ? (
         <div
           className="glass"
           style={{
@@ -190,7 +231,7 @@ export default function PromosClient({ initialPromos }: Props) {
           }}
         >
           <Tag size={40} color="var(--text-muted)" style={{ margin: "0 auto 1rem" }} />
-          <p style={{ fontWeight: 500 }}>Sin códigos promocionales</p>
+          <p style={{ fontWeight: 500 }}>{q ? "Sin resultados para esa búsqueda" : "Sin códigos promocionales"}</p>
           <p style={{ fontSize: "0.85rem", marginTop: 4 }}>Creá el primero con el botón de arriba.</p>
         </div>
       ) : (
@@ -201,7 +242,7 @@ export default function PromosClient({ initialPromos }: Props) {
             gap: "0.85rem",
           }}
         >
-          {promos.map((p, i) => {
+          {paginated.map((p, i) => {
             const maxUses = p.usageLimit ?? 0;
             const pct = maxUses > 0 ? Math.min(100, (p.timesUsed / maxUses) * 100) : 0;
             const expired = p.validUntil ? new Date(p.validUntil) < new Date() : false;
@@ -323,6 +364,7 @@ export default function PromosClient({ initialPromos }: Props) {
           })}
         </div>
       )}
+      <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
     </div>
   );
 }
