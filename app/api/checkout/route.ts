@@ -114,6 +114,10 @@ export async function POST(req: Request) {
         : undefined,
       ...(isPublicUrl ? { auto_return: "approved" as const } : {}),
       notification_url: `${origin}/api/webhooks/mp`,
+      payment_methods: {
+        excluded_payment_types: [],   // no excluir ninguno
+        installments: 1,              // sin cuotas (ajustá si querés permitir más)
+      },
       statement_descriptor: "3DMORE",
       external_reference: `order_${Date.now()}_${user.id.slice(0, 8)}`,
     };
