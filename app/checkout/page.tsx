@@ -25,7 +25,13 @@ export default function CheckoutPage() {
   const { items, subtotal, total, promoCode, promoDiscount } = useCart();
 
   const [step, setStep] = useState<Step>(0);
+  const [maxReached, setMaxReached] = useState<Step>(0);
   const hasAutoAdvanced = useRef(false);
+
+  // Mantener maxReached actualizado
+  useEffect(() => {
+    setMaxReached((prev) => Math.max(prev, step) as Step);
+  }, [step]);
   const [zones, setZones] = useState<ShippingZone[]>([]);
 
   // Step 1 — Perfil
@@ -84,6 +90,18 @@ export default function CheckoutPage() {
     0;
 
   const saveProfile = async () => {
+    // Si no cambió nada respecto al perfil guardado, avanzar sin llamar a la API
+    const dirty =
+      form.firstName !== (profile?.firstName ?? "") ||
+      form.lastName !== (profile?.lastName ?? "") ||
+      form.documentId !== (profile?.documentId ?? "") ||
+      form.phone !== (profile?.phone ?? "");
+
+    if (!dirty) {
+      setStep(1);
+      return;
+    }
+
     setSavingProfile(true);
     try {
       const res = await fetch("/api/profile", {
@@ -209,7 +227,7 @@ export default function CheckoutPage() {
           </h1>
         </div>
 
-        <Stepper current={step} />
+        <Stepper current={step} maxReached={maxReached} onNavigate={(s) => setStep(s)} />
 
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: "2rem", marginTop: "2rem" }}>
           {/* Contenido del step */}
@@ -292,7 +310,7 @@ export default function CheckoutPage() {
 }
 
 // ───────────────────────────────────────────────────────────────── STEPPER
-function Stepper({ current }: { current: Step }) {
+function Stepper({ current, maxReached, onNavigate }: { current: Step; maxReached: Step; onNavigate: (s: Step) => void }) {
   const steps = [
     { label: "Perfil", icon: User },
     { label: "Envío", icon: Truck },
@@ -303,21 +321,28 @@ function Stepper({ current }: { current: Step }) {
       {steps.map((s, i) => {
         const done = i < current;
         const active = i === current;
+        const clickable = i !== current && i <= maxReached;
         const Icon = done ? CheckCircle2 : s.icon;
         return (
           <div key={s.label} style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "0.55rem 1rem", borderRadius: "var(--radius-pill)",
-              background: active ? "rgba(255,42,133,0.12)" : done ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.04)",
-              border: `1px solid ${active ? "rgba(255,42,133,0.5)" : done ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.06)"}`,
-              color: active ? "var(--accent-pink)" : done ? "var(--success)" : "var(--text-secondary)",
-              fontSize: "0.88rem", fontWeight: active ? 700 : 500,
-              transition: "all 0.25s",
-            }}>
+            <button
+              onClick={() => clickable && onNavigate(i as Step)}
+              disabled={!clickable && !active}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "0.55rem 1rem", borderRadius: "var(--radius-pill)",
+                background: active ? "rgba(255,42,133,0.12)" : done ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.04)",
+                border: `1px solid ${active ? "rgba(255,42,133,0.5)" : done ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.06)"}`,
+                color: active ? "var(--accent-pink)" : done ? "var(--success)" : "var(--text-secondary)",
+                fontSize: "0.88rem", fontWeight: active ? 700 : 500,
+                transition: "all 0.25s",
+                cursor: clickable ? "pointer" : "default",
+                outline: "none",
+              }}
+            >
               <Icon size={15} />
               {s.label}
-            </div>
+            </button>
             {i < steps.length - 1 && (
               <div style={{ width: 30, height: 1, background: done ? "var(--success)" : "rgba(255,255,255,0.08)" }} />
             )}
