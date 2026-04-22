@@ -30,6 +30,11 @@ interface ShippingData {
   notes?: string;
 }
 
+interface StatusHistoryEntry {
+  status: OrderStatus;
+  createdAt: string;
+}
+
 interface Order {
   id: string;
   status: OrderStatus;
@@ -51,6 +56,7 @@ interface Order {
   reviewRating: number | null;
   reviewText: string | null;
   reviewImageUrl: string | null;
+  statusHistory: StatusHistoryEntry[];
 }
 
 const STATUS: Record<OrderStatus, { label: string; detail: string; color: string; bg: string; Icon: React.ElementType }> = {
@@ -297,6 +303,53 @@ export default function AccountOrdersPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Timeline de estados */}
+                      {order.statusHistory && order.statusHistory.length > 0 && (
+                        <Section title="Seguimiento del pedido">
+                          <div style={{ position: "relative", paddingLeft: "1.25rem" }}>
+                            {/* línea vertical */}
+                            <div style={{
+                              position: "absolute", left: "6px", top: "8px",
+                              bottom: "8px", width: "2px",
+                              background: "rgba(255,255,255,0.08)",
+                            }} />
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+                              {order.statusHistory.map((entry, idx) => {
+                                const isLast = idx === order.statusHistory.length - 1;
+                                const s = STATUS[entry.status];
+                                const d = new Date(entry.createdAt);
+                                const fecha = d.toLocaleDateString("es-UY", { day: "2-digit", month: "short", year: "numeric" });
+                                const hora  = d.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit" });
+                                return (
+                                  <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem" }}>
+                                    {/* dot */}
+                                    <div style={{
+                                      position: "absolute", left: 0,
+                                      width: "14px", height: "14px",
+                                      borderRadius: "50%",
+                                      background: isLast ? s.color : "rgba(255,255,255,0.15)",
+                                      border: `2px solid ${isLast ? s.color : "rgba(255,255,255,0.2)"}`,
+                                      flexShrink: 0, marginTop: "2px",
+                                    }} />
+                                    <div>
+                                      <p style={{
+                                        fontSize: "0.82rem", fontWeight: isLast ? 700 : 500,
+                                        color: isLast ? s.color : "var(--text-primary)",
+                                      }}>
+                                        {s.label}
+                                      </p>
+                                      <p style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: 1 }}>
+                                        {fecha} · {hora}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </Section>
+                      )}
 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
                         {/* Productos */}

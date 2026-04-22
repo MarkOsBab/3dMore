@@ -44,10 +44,15 @@ export async function PATCH(
     );
   }
 
-  const updated = await prisma.order.update({
-    where: { id },
-    data: { status: status as never },
-  });
+  const [updated] = await prisma.$transaction([
+    prisma.order.update({
+      where: { id },
+      data: { status: status as never },
+    }),
+    prisma.orderStatusHistory.create({
+      data: { orderId: id, status: status as never },
+    }),
+  ]);
 
   return NextResponse.json(updated);
 }

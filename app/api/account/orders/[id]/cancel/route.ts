@@ -26,10 +26,15 @@ export async function POST(
     );
   }
 
-  const updated = await prisma.order.update({
-    where: { id },
-    data: { status: "CANCELLED" },
-  });
+  const [updated] = await prisma.$transaction([
+    prisma.order.update({
+      where: { id },
+      data: { status: "CANCELLED" },
+    }),
+    prisma.orderStatusHistory.create({
+      data: { orderId: id, status: "CANCELLED" },
+    }),
+  ]);
 
   return NextResponse.json(updated);
 }

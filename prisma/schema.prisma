@@ -133,7 +133,19 @@ model Order {
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
+  statusHistory      OrderStatusHistory[]
+
   @@index([userId])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
 }
 
 enum OrderStatus {

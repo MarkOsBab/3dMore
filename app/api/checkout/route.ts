@@ -136,7 +136,7 @@ export async function POST(req: Request) {
       ? subtotal * (1 - promoDiscount / 100)
       : subtotal;
 
-    await prisma.order.create({
+    const newOrder = await prisma.order.create({
       data: {
         mpExternalRef: mpBody.external_reference!,
         status: "PENDING",
@@ -157,6 +157,9 @@ export async function POST(req: Request) {
         payerEmail: profile.email ?? user.email ?? null,
         payerName: `${profile.firstName} ${profile.lastName}`,
       },
+    });
+    await prisma.orderStatusHistory.create({
+      data: { orderId: newOrder.id, status: "PENDING" },
     });
 
     return NextResponse.json({ url: result.init_point });

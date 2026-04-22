@@ -52,6 +52,11 @@ export async function POST(req: Request) {
     const newStatus = statusMap[payment.status ?? ""] ?? "PENDING";
 
     // Actualizar el Order en BD
+    const existingOrder = await prisma.order.findUnique({
+      where: { mpExternalRef: externalRef },
+      select: { id: true, status: true },
+    });
+
     const order = await prisma.order.update({
       where: { mpExternalRef: externalRef },
       data: {
@@ -62,6 +67,13 @@ export async function POST(req: Request) {
           .filter(Boolean).join(" ") || null,
       },
     });
+
+    // Registrar cambio de estado solo si realmente cambió
+    if (existingOrder && existingOrder.status !== newStatus) {
+      await prisma.orderStatusHistory.create({
+        data: { orderId: order.id, status: newStatus },
+      });
+    }
 
     // Solo notificar por WhatsApp cuando se aprueba
     if (newStatus === "APPROVED") {

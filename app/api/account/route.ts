@@ -33,6 +33,10 @@ export async function GET() {
         reviewRating: true,
         reviewText: true,
         reviewImageUrl: true,
+        statusHistory: {
+          orderBy: { createdAt: "asc" },
+          select: { status: true, createdAt: true },
+        },
       },
     }),
     prisma.promoCode.findMany({
