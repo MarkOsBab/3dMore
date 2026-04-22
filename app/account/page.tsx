@@ -6,10 +6,30 @@ import { useRouter } from "next/navigation";
 import {
   User as UserIcon, Package, Tag, LogOut, Save,
   CheckCircle, Clock, XCircle, ChevronLeft, Copy,
+  MapPin, Home, Star, Trash2, Plus, X, Info,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
 type Status = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+
+interface SavedAddress {
+  id: string;
+  label: string | null;
+  street: string;
+  doorNumber: string;
+  corner: string | null;
+  neighborhood: string;
+  postalCode: string | null;
+  zoneId: string;
+  zoneName: string;
+  isDefault: boolean;
+}
+
+interface ShippingZone {
+  id: string;
+  name: string;
+  cost: number;
+}
 
 interface OrderRow {
   id: string;
@@ -39,6 +59,13 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [promos, setPromos] = useState<PromoRow[]>([]);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [zones, setZones] = useState<ShippingZone[]>([]);
+  const [showAddrForm, setShowAddrForm] = useState(false);
+  const [deletingAddr, setDeletingAddr] = useState<string | null>(null);
+  const [savingAddr, setSavingAddr] = useState(false);
+  const emptyAddr = { label: "", street: "", doorNumber: "", corner: "", neighborhood: "", postalCode: "", zoneId: "" };
+  const [addrForm, setAddrForm] = useState(emptyAddr);
 
   useEffect(() => {
     if (!loading && !user) router.push("/");
@@ -81,6 +108,41 @@ export default function AccountPage() {
       setTimeout(() => setSaved(false), 2200);
     }
   };
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/shipping/addresses").then(async (r) => { if (r.ok) setAddresses(await r.json()); });
+    fetch("/api/shipping/zones").then(async (r) => { if (r.ok) setZones(await r.json()); });
+  }, [user]);
+
+  const handleDeleteAddr = async (id: string) => {
+    setDeletingAddr(id);
+    await fetch(`/api/shipping/addresses/${id}`, { method: "DELETE" });
+    setAddresses((prev) => prev.filter((a) => a.id !== id));
+    setDeletingAddr(null);
+  };
+
+  const handleSaveAddr = async () => {
+    if (!addrForm.street || !addrForm.doorNumber || !addrForm.neighborhood || !addrForm.zoneId) return;
+    setSavingAddr(true);
+    try {
+      const zone = zones.find((z) => z.id === addrForm.zoneId);
+      const res = await fetch("/api/shipping/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...addrForm, zoneName: zone?.name ?? "" }),
+      });
+      if (!res.ok) { alert("Error al guardar la dirección"); return; }
+      const saved = await res.json();
+      setAddresses((prev) => [...prev, saved]);
+      setAddrForm(emptyAddr);
+      setShowAddrForm(false);
+    } finally {
+      setSavingAddr(false);
+    }
+  };
+
+  const canSaveAddr = Boolean(addrForm.street && addrForm.doorNumber && addrForm.neighborhood && addrForm.zoneId);
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -218,6 +280,112 @@ export default function AccountPage() {
             </div>
           )}
         </section>
+
+        {/* Direcciones guardadas */}
+        <section className="glass" style={{ marginTop: "1.5rem", padding: "1.5rem", borderRadius: "var(--radius-xl)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+              <MapPin size={16} color="var(--accent-pink)" /> Mis direcciones
+            </h2>
+            {!showAddrForm && (
+              <button
+                onClick={() => setShowAddrForm(true)}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "0.45rem 0.9rem", background: "rgba(255,42,133,0.08)", color: "var(--accent-pink)", border: "1px solid rgba(255,42,133,0.3)", borderRadius: "var(--radius-pill)", cursor: "pointer", fontSize: "0.82rem", fontWeight: 600 }}
+              >
+                <Plus size={14} /> Agregar
+              </button>
+            )}
+          </div>
+
+          {/* Lista */}
+          {addresses.length === 0 && !showAddrForm && (
+            <div style={{ padding: "1.5rem", textAlign: "center", background: "rgba(255,255,255,0.02)", borderRadius: "var(--radius-lg)", border: "1px dashed rgba(255,255,255,0.1)" }}>
+              <MapPin size={24} color="var(--text-muted)" style={{ marginBottom: 6 }} />
+              <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)" }}>No tenés direcciones guardadas</p>
+              <p style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginTop: 4 }}>Guardá una para agilizar tus próximas compras</p>
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+            {addresses.map((addr) => (
+              <div key={addr.id} style={{ display: "flex", alignItems: "center", gap: "0.9rem", padding: "0.9rem 1rem", borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <div style={{ width: 36, height: 36, flexShrink: 0, borderRadius: "var(--radius-md)", background: addr.isDefault ? "rgba(255,42,133,0.12)" : "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", color: addr.isDefault ? "var(--accent-pink)" : "var(--text-secondary)" }}>
+                  {addr.isDefault ? <Star size={16} /> : <Home size={16} />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {addr.label && <p style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--text-secondary)", letterSpacing: "0.5px", marginBottom: 2 }}>{addr.label}</p>}
+                  <p style={{ fontSize: "0.9rem", fontWeight: 500 }}>
+                    {addr.street} {addr.doorNumber}{addr.corner ? ` esq. ${addr.corner}` : ""}
+                  </p>
+                  <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: 1 }}>
+                    {addr.neighborhood}{addr.postalCode ? ` · CP ${addr.postalCode}` : ""} · <span style={{ color: "var(--text-muted)" }}>{addr.zoneName}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleDeleteAddr(addr.id)}
+                  disabled={deletingAddr === addr.id}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: "0.35rem", flexShrink: 0 }}
+                  title="Eliminar"
+                >
+                  {deletingAddr === addr.id
+                    ? <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+                    : <Trash2 size={15} />}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Formulario nueva dirección */}
+          {showAddrForm && (
+            <div style={{ marginTop: addresses.length > 0 ? "1rem" : 0, padding: "1.25rem", background: "rgba(255,255,255,0.03)", borderRadius: "var(--radius-lg)", border: "1px solid rgba(255,255,255,0.09)", display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <p style={{ fontWeight: 700, fontSize: "0.95rem" }}>Nueva dirección</p>
+                <button onClick={() => { setShowAddrForm(false); setAddrForm(emptyAddr); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4 }}>
+                  <X size={17} />
+                </button>
+              </div>
+
+              <AddrField label="Etiqueta (opcional)" value={addrForm.label} onChange={(v) => setAddrForm({ ...addrForm, label: v })} placeholder="Ej: Casa, Trabajo…" />
+
+              <div>
+                <label style={addrLabelStyle}>Zona de entrega</label>
+                <select value={addrForm.zoneId} onChange={(e) => setAddrForm({ ...addrForm, zoneId: e.target.value })} className="admin-input">
+                  <option value="">Seleccioná una zona</option>
+                  {zones.map((z) => <option key={z.id} value={z.id}>{z.name} — ${z.cost}</option>)}
+                </select>
+                <p style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Info size={11} /> El costo de envío se abona al recibir el pedido.
+                </p>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <AddrField label="Calle" value={addrForm.street} onChange={(v) => setAddrForm({ ...addrForm, street: v })} placeholder="Ej: Av. 18 de Julio" />
+                <AddrField label="Nro. puerta" value={addrForm.doorNumber} onChange={(v) => setAddrForm({ ...addrForm, doorNumber: v })} placeholder="Ej: 1234 apto 5" />
+              </div>
+              <AddrField label="Esquina (opcional)" value={addrForm.corner} onChange={(v) => setAddrForm({ ...addrForm, corner: v })} placeholder="Ej: Yaguarón" />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                <AddrField label="Barrio" value={addrForm.neighborhood} onChange={(v) => setAddrForm({ ...addrForm, neighborhood: v })} placeholder="Ej: Centro" />
+                <AddrField label="Código postal (opcional)" value={addrForm.postalCode} onChange={(v) => setAddrForm({ ...addrForm, postalCode: v })} placeholder="Ej: 11000" />
+              </div>
+
+              <div style={{ display: "flex", gap: "0.65rem", paddingTop: 4 }}>
+                <button
+                  onClick={handleSaveAddr}
+                  disabled={!canSaveAddr || savingAddr}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "0.7rem 1.3rem", background: "var(--accent-pink)", color: "white", border: "none", borderRadius: "var(--radius-pill)", cursor: canSaveAddr && !savingAddr ? "pointer" : "default", fontWeight: 600, fontSize: "0.88rem", opacity: !canSaveAddr || savingAddr ? 0.45 : 1 }}
+                >
+                  {savingAddr ? <><span className="spinner" style={{ width: 13, height: 13, borderWidth: 2 }} /> Guardando…</> : "Guardar dirección"}
+                </button>
+                <button
+                  onClick={() => { setShowAddrForm(false); setAddrForm(emptyAddr); }}
+                  style={{ padding: "0.7rem 1.1rem", background: "transparent", color: "var(--text-secondary)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "var(--radius-pill)", cursor: "pointer", fontSize: "0.88rem" }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
@@ -290,6 +458,21 @@ function Input({ label, value, onChange }: { label: string; value: string; onCha
         onChange={(e) => onChange(e.target.value)}
         className="admin-input"
       />
+    </div>
+  );
+}
+
+const addrLabelStyle: React.CSSProperties = {
+  fontSize: "0.7rem", fontWeight: 600, letterSpacing: "1px",
+  color: "var(--text-secondary)", textTransform: "uppercase",
+  marginBottom: 4, display: "block",
+};
+
+function AddrField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <div>
+      <label style={addrLabelStyle}>{label}</label>
+      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="admin-input" />
     </div>
   );
 }
