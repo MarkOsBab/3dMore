@@ -1,105 +1,100 @@
-import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 
-const client = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN!,
-});
-
-export const maxDuration = 60;
+export const maxDuration = 10;
 
 /**
  * Mercado Pago webhook — recibe notificaciones de pago.
- * Responde 200 inmediatamente a MP y procesa en background con after().
  */
 export async function POST(req: Request) {
-  let body: { type?: string; data?: { id?: string } };
+  // Responder 200 siempre — ninguna excepción debe llegar a Vercel
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ received: true });
-  }
-
-  const { type, data } = body;
-
-  if (type !== "payment" || !data?.id) {
-    return NextResponse.json({ received: true });
-  }
-
-  const paymentId = data.id;
-
-  // Responder 200 a MP de inmediato para evitar timeouts y reintentos
-  after(async () => {
+    let body: { type?: string; data?: { id?: string } };
     try {
-      const paymentApi = new Payment(client);
-      let payment;
-      try {
-        payment = await paymentApi.get({ id: paymentId });
-      } catch (err: unknown) {
-        const mpErr = err as { status?: number };
-        console.error(`[MP Webhook] Error fetching payment ${paymentId}:`, mpErr?.status, err);
-        return;
-      }
-
-      const externalRef = payment.external_reference;
-      if (!externalRef) {
-        console.log(`[MP Webhook] Payment ${paymentId} sin external_reference, ignorado`);
-        return;
-      }
-
-      // Mapa de status MP → OrderStatus
-      const statusMap: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDING"> = {
-        approved:   "APPROVED",
-        rejected:   "REJECTED",
-        cancelled:  "CANCELLED",
-        refunded:   "CANCELLED",
-        pending:    "PENDING",
-        in_process: "PENDING",
-        authorized: "PENDING",
-      };
-
-      const newStatus = statusMap[payment.status ?? ""] ?? "PENDING";
-
-      const existingOrder = await prisma.order.findUnique({
-        where: { mpExternalRef: externalRef },
-        select: { id: true, status: true },
-      });
-
-      if (!existingOrder) {
-        console.error(`[MP Webhook] No se encontró order con mpExternalRef=${externalRef}`);
-        return;
-      }
-
-      const order = await prisma.order.update({
-        where: { mpExternalRef: externalRef },
-        data: {
-          status: newStatus,
-          mpPaymentId: String(payment.id),
-          payerEmail: payment.payer?.email ?? null,
-          payerName: [payment.payer?.first_name, payment.payer?.last_name]
-            .filter(Boolean).join(" ") || null,
-        },
-      });
-
-      if (existingOrder.status !== newStatus) {
-        await prisma.orderStatusHistory.create({
-          data: { orderId: order.id, status: newStatus },
-        });
-      }
-
-      if (newStatus === "APPROVED") {
-        await issueLoyaltyPromoIfNeeded(order.id);
-        await notifyWhatsApp(order);
-      }
-
-      console.log(`[MP Webhook] Payment ${paymentId} procesado → ${newStatus} (order ${order.id.slice(0, 8)})`);
-    } catch (error) {
-      console.error("[MP Webhook] Error en procesamiento:", error);
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ received: true });
     }
-  });
 
-  return NextResponse.json({ received: true });
+    const { type, data } = body;
+    if (type !== "payment" || !data?.id) {
+      return NextResponse.json({ received: true });
+    }
+
+    const paymentId = data.id;
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+    if (!accessToken) {
+      console.error("[MP Webhook] MP_ACCESS_TOKEN no configurado");
+      return NextResponse.json({ received: true });
+    }
+
+    // Consultar el pago a la API de MP
+    const client = new MercadoPagoConfig({ accessToken });
+    const paymentApi = new Payment(client);
+
+    let payment;
+    try {
+      payment = await paymentApi.get({ id: paymentId });
+    } catch (err: unknown) {
+      console.error(`[MP Webhook] Error al obtener payment ${paymentId}:`, err);
+      return NextResponse.json({ received: true });
+    }
+
+    const externalRef = payment.external_reference;
+    if (!externalRef) {
+      return NextResponse.json({ received: true });
+    }
+
+    const statusMap: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDING"> = {
+      approved:   "APPROVED",
+      rejected:   "REJECTED",
+      cancelled:  "CANCELLED",
+      refunded:   "CANCELLED",
+      pending:    "PENDING",
+      in_process: "PENDING",
+      authorized: "PENDING",
+    };
+    const newStatus = statusMap[payment.status ?? ""] ?? "PENDING";
+
+    const existingOrder = await prisma.order.findUnique({
+      where: { mpExternalRef: externalRef },
+      select: { id: true, status: true },
+    });
+
+    if (!existingOrder) {
+      console.error(`[MP Webhook] Order no encontrada: mpExternalRef=${externalRef}`);
+      return NextResponse.json({ received: true });
+    }
+
+    const order = await prisma.order.update({
+      where: { mpExternalRef: externalRef },
+      data: {
+        status: newStatus,
+        mpPaymentId: String(payment.id),
+        payerEmail: payment.payer?.email ?? null,
+        payerName: [payment.payer?.first_name, payment.payer?.last_name]
+          .filter(Boolean).join(" ") || null,
+      },
+    });
+
+    if (existingOrder.status !== newStatus) {
+      await prisma.orderStatusHistory.create({
+        data: { orderId: order.id, status: newStatus },
+      });
+    }
+
+    if (newStatus === "APPROVED") {
+      await issueLoyaltyPromoIfNeeded(order.id);
+      await notifyWhatsApp(order);
+    }
+
+    console.log(`[MP Webhook] OK payment=${paymentId} status=${newStatus} order=${order.id.slice(0, 8)}`);
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    console.error("[MP Webhook] Error inesperado:", error);
+    return NextResponse.json({ received: true });
+  }
 }
 
 async function notifyWhatsApp(order: {
