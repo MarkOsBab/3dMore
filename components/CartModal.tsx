@@ -75,7 +75,7 @@ export default function CartModal() {
       onClick={() => setIsCartOpen(false)}
     >
       <div
-        className="glass"
+        className="glass cart-modal-panel"
         style={{
           width: "100%",
           maxWidth: "460px",

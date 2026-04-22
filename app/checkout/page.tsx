@@ -327,7 +327,7 @@ export default function CheckoutPage() {
 
         <Stepper current={step} maxReached={maxReached} onNavigate={(s) => setStep(s)} />
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: "2rem", marginTop: "2rem" }}>
+        <div className="checkout-layout" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 340px", gap: "2rem", marginTop: "2rem" }}>
           {/* Contenido del step */}
           <div className="glass animate-fade-in-up" style={{ padding: "2rem", borderRadius: "var(--radius-xl)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {step === 0 && (
@@ -493,7 +493,7 @@ function StepProfile({ user, profile, form, setForm, signIn, onSave, saving }: a
         {profile?.firstName ? "Revisá y completá tus datos." : "Necesitamos estos datos para preparar tu pedido."}
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+      <div className="responsive-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
         <Field label="Nombre" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} />
         <Field label="Apellido" value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} />
         <Field label="Documento (CI)" value={form.documentId} onChange={(v) => setForm({ ...form, documentId: v })} icon={FileText} />
@@ -872,7 +872,7 @@ function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, 
 function OrderSummary({ items, subtotal, total, promoCode, promoDiscount, shippingCost, method }: any) {
   return (
     <aside
-      className="glass"
+      className="glass checkout-summary"
       style={{
         padding: "1.5rem", borderRadius: "var(--radius-xl)",
         border: "1px solid rgba(255,255,255,0.06)",

@@ -93,6 +93,7 @@ export default function PromosClient({ initialPromos }: Props) {
   return (
     <div>
       <div
+        className="admin-page-header"
         style={{
           display: "flex",
           justifyContent: "space-between",

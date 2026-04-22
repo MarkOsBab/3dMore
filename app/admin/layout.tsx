@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut, Star } from "lucide-react";
+import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut, Star, Menu, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ConfirmProvider } from "@/components/admin/ConfirmDialog";
+import { useState } from "react";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -18,6 +19,7 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Login page: sin sidebar
   if (pathname === "/admin/login") {
@@ -33,8 +35,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <ConfirmProvider>
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--bg-dark)" }}>
+
+      {/* Mobile backdrop */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: "fixed", inset: 0,
+            background: "rgba(0,0,0,0.65)",
+            zIndex: 88,
+            backdropFilter: "blur(2px)",
+          }}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
+        className={`admin-sidebar${sidebarOpen ? " mobile-open" : ""}`}
         style={{
           width: "256px",
           flexShrink: 0,
@@ -104,6 +121,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 key={href}
                 href={href}
                 className={`admin-nav-item${active ? " active" : ""}`}
+                onClick={() => setSidebarOpen(false)}
               >
                 <Icon size={17} />
                 {label}
@@ -189,7 +207,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           flexDirection: "column",
         }}
       >
-        <div style={{ flexGrow: 1, padding: "2.5rem 3rem", maxWidth: 1100 }}>
+        {/* Mobile top bar — hidden on desktop via CSS */}
+        <div
+          className="admin-mobile-topbar"
+          style={{
+            alignItems: "center",
+            gap: "0.75rem",
+            padding: "0.875rem 1rem",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            backgroundColor: "#0d0d14",
+            position: "sticky",
+            top: 0,
+            zIndex: 87,
+          }}
+        >
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            aria-label="Abrir menú"
+            style={{
+              background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "var(--radius-sm)", padding: "0.4rem", color: "white",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <div className="text-gradient" style={{ fontWeight: 800, fontSize: "1rem", letterSpacing: "1px" }}>
+            3DMORE Admin
+          </div>
+        </div>
+
+        <div className="admin-content-area" style={{ flexGrow: 1, padding: "2.5rem 3rem", maxWidth: 1100 }}>
           {children}
         </div>
       </main>

@@ -131,7 +131,7 @@ export default function OrdersClient({ initialOrders }: Props) {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
+      <div className="admin-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.3rem" }}>
             <ShoppingBag size={20} color="var(--accent-pink)" />
@@ -170,7 +170,7 @@ export default function OrdersClient({ initialOrders }: Props) {
       </div>
 
       {/* Filtros */}
-      <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+      <div className="admin-filter-scroll" style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         {(["ALL", "PENDING", "APPROVED", "CONFIRMED", "READY_FOR_DELIVERY", "DELIVERED", "REJECTED", "CANCELLED"] as const).map((s) => {
           const active = filter === s;
           const cfg = s !== "ALL" ? STATUS_CONFIG[s] : null;

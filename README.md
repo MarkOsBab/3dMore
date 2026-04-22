@@ -2,7 +2,7 @@
 
 Design system for **3dMore**, an Uruguayan small-business (emprendimiento) selling **3D-printed accessories for motorcycle helmets** — demon horns ("cuernitos"), cat ears ("orejitas"), kawaii bows, neon punk crests, etc. Target audience: riders who want to stand out. Aesthetic: cyberpunk / darkrider / neon-Tokyo.
 
-> **Tagline in product copy:** "PERSONALIZA TU RODADA" — personalize your ride.
+> **Tagline in product copy:** "Accesorios para casco" — personalize your ride.
 
 ---
 
@@ -52,7 +52,7 @@ Both surfaces share one token set.
 **Tone:** Hype, edgy, direct. Short sentences. Addresses the rider as **"vos/tú"** implicitly (imperative verbs dominate). No corporate softening. Brand speaks from inside the biker subculture.
 
 **Voice examples** (verbatim from codebase):
-- Hero headline: **"PERSONALIZA TU RODADA"**
+- Hero headline: **"Accesorios para casco"**
 - Hero sub: *"Accesorios impresos en 3D para cascos. Orejitas, cuernos de demonio y más. Expresa tu estilo en el asfalto."*
 - Section title: **"NUESTROS PRODUCTOS"** / sub: *"Diseños únicos para destacar en cada viaje."*
 - Product description: *"Cuernos impresos en 3D super resistentes con anclaje universal para cualquier casco. Ideales para un look agresivo y darkrider."*
@@ -185,7 +185,7 @@ Rems: `0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6`. Section padding vertical is `
 
 **SVG logotypes:** hand-simplified single-color versions of the mark live at `assets/logo_wordmark.svg` (type-only) and `assets/logo_helmet_mark.svg` (glyph-only, white-on-transparent, intended for dark backgrounds). Both are simplified approximations extracted from the raster — for pixel-perfect print use, request a vector original from the user.
 
-**Emoji as icons:** Used sparingly inline with `<strong>Label:</strong> value` pattern (`✅ Material:`, `✈️ Envíos:`, `🛡️ Garantía:`). Also used in CTA prefixes for payment methods (`💳 PAGAR CON MERCADO PAGO`, `💬 PAGAR POR WHATSAPP`) and empty/error states (`🚧`, `🔒`). Never clustered, never decorative.
+**Emoji as icons:** Used sparingly inline with `<strong>Label:</strong> value` pattern (`✅ Material:`, `✈️ Envíos:`). Also used in CTA prefixes for payment methods (`💳 PAGAR CON MERCADO PAGO`, `💬 PAGAR POR WHATSAPP`) and empty/error states (`🚧`, `🔒`). Never clustered, never decorative.
 
 **Unicode characters as UI glyphs:** `→` used in the admin `Ver tienda →` link. `—` em-dash in copy (not `-`). `$` prefix for all money. `∞` used for "unlimited uses" in the promo table.
 

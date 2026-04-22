@@ -163,6 +163,7 @@ export default async function AdminDashboard() {
 
       {/* Stat cards */}
       <div
+        className="admin-stat-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",

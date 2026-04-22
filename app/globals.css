@@ -5,6 +5,15 @@
 
 @import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap");
 
+/* Review card hover — used by ReviewsSection (Server Component) */
+.review-card {
+  transition: border-color 0.2s, transform 0.2s;
+}
+.review-card:hover {
+  border-color: rgba(255, 42, 133, 0.2) !important;
+  transform: translateY(-2px);
+}
+
 :root {
   /* ── Backgrounds & surfaces ─────────────────────────────────────────── */
   --bg-dark:        #0a0a0f;
@@ -406,4 +415,336 @@ button:active:not(:disabled) { transform: scale(0.97); }
   border-top-color: #ef4444;
   animation: spin 0.55s linear infinite;
   flex-shrink: 0;
+}
+
+/* =========================================================================
+   WhatsApp FAB — botón flotante de contacto
+   ========================================================================= */
+
+.wa-fab-wrap {
+  position: fixed;
+  bottom: 1.75rem;
+  right: 1.75rem;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+/* ── Panel ──────────────────────────────────────────────────────────────── */
+.wa-fab-panel {
+  width: min(340px, calc(100vw - 3.5rem));
+  border-radius: 20px;
+  background: #18181f;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  overflow: hidden;
+  animation: wa-panel-in 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: bottom right;
+}
+
+@keyframes wa-panel-in {
+  from { opacity: 0; transform: scale(0.85) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.wa-fab-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.1rem 1.1rem 0.9rem;
+  background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
+}
+
+.wa-fab-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.wa-fab-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+
+.wa-fab-subtitle {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wa-fab-subtitle::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade80;
+  flex-shrink: 0;
+}
+
+.wa-fab-close {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.wa-fab-close:hover { background: rgba(255, 255, 255, 0.28); }
+
+/* ── Body ────────────────────────────────────────────────────────────────── */
+.wa-fab-body {
+  padding: 1rem 0.9rem 1.1rem;
+}
+
+.wa-fab-intro {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  padding: 0 0.1rem;
+}
+
+.wa-fab-options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.wa-fab-option {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 13px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  text-align: left;
+  color: inherit;
+}
+.wa-fab-option:hover {
+  background: rgba(37, 211, 102, 0.08);
+  border-color: rgba(37, 211, 102, 0.25);
+  transform: translateX(2px);
+}
+
+.wa-fab-option-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(37, 211, 102, 0.1);
+  border: 1px solid rgba(37, 211, 102, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #25d366;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.wa-fab-option:hover .wa-fab-option-icon {
+  background: rgba(37, 211, 102, 0.18);
+}
+
+.wa-fab-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.wa-fab-option-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wa-fab-option-desc {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Botón flotante ─────────────────────────────────────────────────────── */
+.wa-fab-button {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  background: #25d366;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 4px 20px rgba(37, 211, 102, 0.45),
+    0 1px 4px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s, background 0.2s;
+  position: relative;
+}
+.wa-fab-button::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(37, 211, 102, 0.3);
+  animation: wa-pulse 2.4s ease-out infinite;
+}
+@keyframes wa-pulse {
+  0%   { opacity: 0.8; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.55); }
+}
+.wa-fab-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(37, 211, 102, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.wa-fab-button.is-open {
+  background: #18181f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+.wa-fab-button.is-open::before { display: none; }
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .wa-fab-wrap {
+    bottom: 1.2rem;
+    right: 1.2rem;
+  }
+  .wa-fab-button {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+/* =========================================================================
+   Mobile Responsiveness — Global media queries
+   ========================================================================= */
+
+/* Navbar visibility helpers (defaults = desktop) */
+.nav-desktop-links { display: flex; }
+.nav-mobile-controls { display: none; }
+
+/* Admin helpers (defaults = desktop) */
+.admin-mobile-topbar { display: none; }
+
+/* Responsive 2-col grid helper: override columns on mobile with !important */
+/* (Inline styles define display/gap; this class only overrides columns) */
+
+@media (max-width: 768px) {
+  /* ── Container ─────────────────────────────────────────────────────── */
+  .container { padding: 0 1rem; }
+
+  /* ── Navbar ─────────────────────────────────────────────────────────── */
+  .nav-desktop-links { display: none !important; }
+  .nav-mobile-controls { display: flex !important; }
+
+  /* ── Admin sidebar: becomes a fixed overlay drawer on mobile ────────── */
+  .admin-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    z-index: 89 !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow-y: auto;
+  }
+  .admin-sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+  .admin-mobile-topbar { display: flex !important; }
+  .admin-content-area {
+    padding: 1.5rem 1rem !important;
+    max-width: 100% !important;
+  }
+
+  /* ── Cart modal: full width on mobile ─────────────────────────────────── */
+  .cart-modal-panel {
+    max-width: 100% !important;
+    padding: 1.25rem !important;
+  }
+
+  /* ── Responsive 2-column grid → single column ───────────────────────── */
+  .responsive-2col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Checkout 2-col layout (form + summary) → stacked ─────────────── */
+  .checkout-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Hero: hide product image column on small screens ─────────────── */
+  .hero-product-col { display: none !important; }
+
+  /* ── Admin page headers: wrap to column on small screens ───────────── */
+  .admin-page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.75rem !important;
+  }
+
+  /* ── Admin filter chips: scroll horizontally ───────────────────────── */
+  .admin-filter-scroll {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  /* ── Admin stat grid ───────────────────────────────────────────────── */
+  .admin-stat-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .container { padding: 0 0.875rem; }
+  .admin-content-area { padding: 1rem 0.875rem !important; }
+  .admin-sidebar { width: min(256px, 88vw) !important; }
+  .admin-stat-grid { grid-template-columns: 1fr !important; }
+
+  /* Checkout: put summary ABOVE the form panel on very small screens */
+  .checkout-summary { order: -1; }
+
+  /* Stepper: smaller font and padding */
+  .checkout-stepper-btn {
+    padding: 0.45rem 0.7rem !important;
+    font-size: 0.8rem !important;
+  }
+  .checkout-stepper-sep { width: 16px !important; }
 }

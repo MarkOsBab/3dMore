@@ -146,7 +146,7 @@ export default function ProductInteractive({ product }: { product: Product }) {
         <div style={{ marginTop: "3rem", padding: "1.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <p>✅ <strong>Material:</strong> PLA / ABS resistente a impactos.</p>
           <p>✈️ <strong>Envíos:</strong> A todo Uruguay (DAC / Correo Uruguayo).</p>
-          <p>🛡️ <strong>Garantía:</strong> 6 meses directa con el emprendimiento.</p>
+          <p>🏎️ <strong>Instalación:</strong> Todos nuestros productos incluyen cinta doble cara de alta resistencia, soporta viento y altas velocidades.</p>
         </div>
       </div>
     </>

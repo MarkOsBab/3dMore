@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { CheckCircle, ArrowLeft, ShoppingBag } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pago realizado",
+  robots: { index: false, follow: false },
+};
 
 export default function SuccessPage() {
   return (

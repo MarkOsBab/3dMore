@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, RefreshCcw, MessageSquare, User } from "lucide-react";
+import { Star, RefreshCcw, MessageSquare, User, Image, ImageOff } from "lucide-react";
 
 interface Review {
   id: string;
   reviewRating: number;
   reviewText: string | null;
   reviewImageUrl: string | null;
+  reviewShowImage: boolean;
   updatedAt: string;
   customerFirstName: string | null;
   customerLastName: string | null;
@@ -39,6 +40,7 @@ export default function ReviewsClient() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lightbox, setLightbox] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const load = async (showSpinner = false) => {
     if (showSpinner) setRefreshing(true);
@@ -49,6 +51,19 @@ export default function ReviewsClient() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const toggleShowImage = async (r: Review) => {
+    setTogglingId(r.id);
+    const res = await fetch("/api/admin/reviews", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: r.id, reviewShowImage: !r.reviewShowImage }),
+    });
+    if (res.ok) {
+      setReviews((prev) => prev.map((x) => x.id === r.id ? { ...x, reviewShowImage: !r.reviewShowImage } : x));
+    }
+    setTogglingId(null);
+  };
 
   const avg = reviews.length
     ? reviews.reduce((s, r) => s + r.reviewRating, 0) / reviews.length
@@ -219,25 +234,46 @@ export default function ReviewsClient() {
                         </p>
                       )}
                       {r.reviewImageUrl && (
-                        <button
-                          onClick={() => setLightbox(r.reviewImageUrl!)}
-                          style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={r.reviewImageUrl}
-                            alt="foto pedido"
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                          <button
+                            onClick={() => setLightbox(r.reviewImageUrl!)}
+                            style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={r.reviewImageUrl}
+                              alt="foto pedido"
+                              style={{
+                                width: 110, height: 90,
+                                objectFit: "cover",
+                                borderRadius: "var(--radius-md)",
+                                border: `2px solid ${r.reviewShowImage ? "rgba(34,197,94,0.5)" : "rgba(255,255,255,0.08)"}`,
+                                transition: "opacity 0.2s",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                              onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                            />
+                          </button>
+                          <button
+                            onClick={() => toggleShowImage(r)}
+                            disabled={togglingId === r.id}
+                            title={r.reviewShowImage ? "Ocultar imagen en home" : "Mostrar imagen en home"}
                             style={{
-                              width: 110, height: 90,
-                              objectFit: "cover",
-                              borderRadius: "var(--radius-md)",
-                              border: "1px solid rgba(255,255,255,0.08)",
-                              transition: "opacity 0.2s",
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              padding: "3px 9px", borderRadius: "99px", fontSize: "0.7rem", fontWeight: 600,
+                              cursor: togglingId === r.id ? "default" : "pointer",
+                              border: `1px solid ${r.reviewShowImage ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.12)"}`,
+                              background: r.reviewShowImage ? "rgba(34,197,94,0.1)" : "rgba(255,255,255,0.04)",
+                              color: r.reviewShowImage ? "var(--success)" : "var(--text-muted)",
+                              opacity: togglingId === r.id ? 0.5 : 1,
+                              transition: "all 0.2s",
                             }}
-                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                          />
-                        </button>
+                          >
+                            {r.reviewShowImage
+                              ? <><Image size={11} /> Visible</>
+                              : <><ImageOff size={11} /> Oculta</>}
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}

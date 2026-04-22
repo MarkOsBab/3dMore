@@ -18,6 +18,7 @@ export async function GET() {
       reviewRating: true,
       reviewText: true,
       reviewImageUrl: true,
+      reviewShowImage: true,
       updatedAt: true,
       customerFirstName: true,
       customerLastName: true,
@@ -32,3 +33,22 @@ export async function GET() {
 
   return NextResponse.json(reviews);
 }
+
+export async function PATCH(req: Request) {
+  const session = await getIronSession<AdminSessionData>(await cookies(), getAdminSessionOptions());
+  if (!session.isAdmin) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+
+  const { id, reviewShowImage } = await req.json();
+  if (!id || typeof reviewShowImage !== "boolean") {
+    return NextResponse.json({ error: "id y reviewShowImage requeridos" }, { status: 400 });
+  }
+
+  const updated = await prisma.order.update({
+    where: { id },
+    data: { reviewShowImage },
+    select: { id: true, reviewShowImage: true },
+  });
+
+  return NextResponse.json(updated);
+}
+

@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { Clock, ArrowLeft, MessageCircle } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pago pendiente",
+  robots: { index: false, follow: false },
+};
 
 export default function PendingPage() {
   return (

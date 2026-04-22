@@ -1,5 +1,11 @@
 import Link from "next/link";
 import { XCircle, ArrowLeft, RefreshCcw } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pago rechazado",
+  robots: { index: false, follow: false },
+};
 
 export default function FailurePage() {
   return (

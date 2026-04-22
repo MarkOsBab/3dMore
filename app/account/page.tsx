@@ -192,13 +192,13 @@ export default function AccountPage() {
           </button>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: "1.5rem" }}>
+        <div className="responsive-2col" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: "1.5rem" }}>
           {/* Datos personales */}
           <section className="glass" style={{ padding: "1.5rem", borderRadius: "var(--radius-xl)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
               <UserIcon size={16} color="var(--accent-pink)" /> Datos personales
             </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div className="responsive-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
               <Input label="Nombre" value={form.firstName} onChange={(v) => setForm({ ...form, firstName: v })} />
               <Input label="Apellido" value={form.lastName} onChange={(v) => setForm({ ...form, lastName: v })} />
               <Input label="Documento" value={form.documentId} onChange={(v) => setForm({ ...form, documentId: v })} />
@@ -391,12 +391,12 @@ export default function AccountPage() {
                 </p>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <div className="responsive-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <AddrField label="Calle" value={addrForm.street} onChange={(v) => setAddrForm({ ...addrForm, street: v })} placeholder="Ej: Av. 18 de Julio" />
                 <AddrField label="Nro. puerta" value={addrForm.doorNumber} onChange={(v) => setAddrForm({ ...addrForm, doorNumber: v })} placeholder="Ej: 1234 apto 5" />
               </div>
               <AddrField label="Esquina (opcional)" value={addrForm.corner} onChange={(v) => setAddrForm({ ...addrForm, corner: v })} placeholder="Ej: Yaguarón" />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+              <div className="responsive-2col" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
                 <AddrField label="Barrio" value={addrForm.neighborhood} onChange={(v) => setAddrForm({ ...addrForm, neighborhood: v })} placeholder="Ej: Centro" />
                 <AddrField label="Código postal (opcional)" value={addrForm.postalCode} onChange={(v) => setAddrForm({ ...addrForm, postalCode: v })} placeholder="Ej: 11000" />
               </div>
