@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { useCart, CartProduct } from "@/lib/CartContext";
-import { ShoppingCart, Check } from "lucide-react";
+import { Eye } from "lucide-react";
 
 interface Product {
   id: string;
@@ -18,21 +16,6 @@ interface Product {
 }
 
 export default function ProductCard({ product }: { product: Product }) {
-  const { addToCart } = useCart();
-  const [isAdded, setIsAdded] = useState(false);
-
-  const cartProduct: CartProduct = {
-    id: product.id,
-    productId: product.id,
-    name: product.name,
-    description: product.description,
-    price: product.price,
-    imageUrl: product.thumbnail ?? "",
-    category: product.category?.name ?? "",
-    isOffer: product.isOffer,
-    discountPercentage: product.discountPct ?? undefined,
-  };
-
   const discounted =
     product.isOffer && product.discountPct
       ? Math.round(product.price * (1 - product.discountPct / 100))
@@ -183,29 +166,20 @@ export default function ProductCard({ product }: { product: Product }) {
             ? product.description.slice(0, 80) + "…"
             : product.description}
         </p>
-        <button
+        <Link
+          href={`/products/${product.id}`}
           className="btn-primary"
-          onClick={(e) => {
-            e.preventDefault();
-            if (isAdded) return;
-            addToCart(cartProduct);
-            setIsAdded(true);
-            setTimeout(() => setIsAdded(false), 1600);
-          }}
           style={{
             width: "100%",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
             gap: "0.5rem",
-            background: isAdded ? "var(--success)" : undefined,
-            boxShadow: isAdded ? "0 0 18px rgba(34,197,94,0.45)" : undefined,
-            animation: isAdded ? "btn-added-pop 0.38s cubic-bezier(0.34,1.56,0.64,1)" : undefined,
-            transition: "background 0.3s ease, box-shadow 0.3s ease",
+            textDecoration: "none",
           }}
         >
-          {isAdded ? <><Check size={18} /> ¡LISTO!</> : <><ShoppingCart size={18} /> AGREGAR AL CARRITO</>}
-        </button>
+          <Eye size={18} /> VER PRODUCTO
+        </Link>
       </div>
     </div>
   );

@@ -43,7 +43,7 @@ interface SavedAddress {
 export default function CheckoutPage() {
   const router = useRouter();
   const { user, profile, loading, isProfileComplete, signInWithGoogle, refreshProfile } = useAuth();
-  const { items, subtotal, total, promoCode, promoDiscount } = useCart();
+  const { items, subtotal, total, promoCode, promoDiscount, clearCart } = useCart();
 
   const [step, setStep] = useState<Step>(0);
   const [maxReached, setMaxReached] = useState<Step>(0);
@@ -248,6 +248,7 @@ export default function CheckoutPage() {
       });
       const data = await res.json();
       if (data.url) {
+        clearCart();
         window.location.href = data.url;
       } else {
         alert(data.error ?? "Error al generar el pago.");
