@@ -1,8 +1,64 @@
 import { NextResponse } from "next/server";
-import { MercadoPagoConfig, Payment } from "mercadopago";
 import { prisma } from "@/lib/prisma";
 
 export const maxDuration = 60;
+
+type MpPayment = {
+  id: number | string;
+  status?: string;
+  external_reference?: string;
+  payer?: {
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+  };
+};
+
+/**
+ * Fetch directo a la API de MP con timeout explícito y reintentos.
+ * El SDK de mercadopago tiene un timeout interno (~5s) demasiado corto.
+ */
+async function fetchMpPayment(paymentId: string, accessToken: string): Promise<MpPayment | null> {
+  const MAX_ATTEMPTS = 3;
+  const TIMEOUT_MS = 15000;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+    try {
+      const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
+      clearTimeout(timer);
+
+      if (res.status === 404) {
+        console.log(`[MP Webhook] Payment ${paymentId} no existe (404)`);
+        return null;
+      }
+      if (!res.ok) {
+        console.error(`[MP Webhook] MP API respondió ${res.status} (intento ${attempt}/${MAX_ATTEMPTS})`);
+        if (attempt === MAX_ATTEMPTS) return null;
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+        continue;
+      }
+      return (await res.json()) as MpPayment;
+    } catch (err) {
+      clearTimeout(timer);
+      const isAbort = (err as Error)?.name === "AbortError";
+      console.error(`[MP Webhook] Error fetch MP payment ${paymentId} (intento ${attempt}/${MAX_ATTEMPTS}):`, isAbort ? "timeout" : err);
+      if (attempt === MAX_ATTEMPTS) return null;
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
+  return null;
+}
 
 /**
  * Mercado Pago webhook.
@@ -11,7 +67,7 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   const started = Date.now();
   const url = new URL(req.url);
-  console.log(`[MP Webhook] ▶ POST ${url.pathname}${url.search} | ua="${req.headers.get("user-agent") ?? "-"}" | x-request-id="${req.headers.get("x-request-id") ?? "-"}"`);
+  console.log(`[MP Webhook] ▶ POST ${url.pathname}${url.search} | x-request-id="${req.headers.get("x-request-id") ?? "-"}"`);
 
   let paymentId: string | undefined;
 
@@ -22,10 +78,10 @@ export async function POST(req: Request) {
       paymentId = String(body.data.id);
     }
   } catch {
-    // body vacío o inválido — MP a veces envía query params en vez de body
+    // body vacío o inválido
   }
 
-  // 2. Fallback: leer de query params (formato ?type=payment&data.id=XXX)
+  // 2. Fallback: query params
   if (!paymentId) {
     const qType = url.searchParams.get("type") || url.searchParams.get("topic");
     const qId = url.searchParams.get("data.id") || url.searchParams.get("id");
@@ -35,7 +91,7 @@ export async function POST(req: Request) {
   }
 
   if (!paymentId) {
-    console.log(`[MP Webhook] ⚠ sin paymentId (body+query vacío) | ${Date.now() - started}ms`);
+    console.log(`[MP Webhook] ⚠ sin paymentId | ${Date.now() - started}ms`);
     return NextResponse.json({ received: true });
   }
 
@@ -45,7 +101,6 @@ export async function POST(req: Request) {
   return NextResponse.json({ received: true });
 }
 
-// MP a veces hace GET primero para validar la URL — responder 200 siempre
 export async function GET(req: Request) {
   const url = new URL(req.url);
   console.log(`[MP Webhook] GET ${url.pathname}${url.search} (health check)`);
@@ -60,16 +115,8 @@ async function processPayment(paymentId: string): Promise<void> {
       return;
     }
 
-    const client = new MercadoPagoConfig({ accessToken });
-    const paymentApi = new Payment(client);
-
-    let payment;
-    try {
-      payment = await paymentApi.get({ id: paymentId });
-    } catch (err) {
-      console.error(`[MP Webhook] Error al obtener payment ${paymentId}:`, err);
-      return;
-    }
+    const payment = await fetchMpPayment(paymentId, accessToken);
+    if (!payment) return;
 
     const externalRef = payment.external_reference;
     if (!externalRef) return;
