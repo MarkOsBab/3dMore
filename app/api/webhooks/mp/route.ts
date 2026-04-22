@@ -1,148 +1,95 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
-type MpPayment = {
-  id: number | string;
-  status?: string;
-  external_reference?: string;
-  payer?: {
-    email?: string;
-    first_name?: string;
-    last_name?: string;
-  };
+const STATUS_MAP: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDING"> = {
+  approved:   "APPROVED",
+  rejected:   "REJECTED",
+  cancelled:  "CANCELLED",
+  refunded:   "CANCELLED",
+  pending:    "PENDING",
+  in_process: "PENDING",
+  authorized: "PENDING",
 };
 
-/**
- * Fetch directo a la API de MP con timeout explícito y reintentos.
- * El SDK de mercadopago tiene un timeout interno (~5s) demasiado corto.
- */
-async function fetchMpPayment(paymentId: string, accessToken: string): Promise<MpPayment | null> {
-  const MAX_ATTEMPTS = 3;
-  const TIMEOUT_MS = 15000;
+export async function POST(req: Request) {
+  try {
+    const url = new URL(req.url);
+    let paymentId: string | undefined;
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const body = await req.json();
+      if (body?.type === "payment" && body?.data?.id) {
+        paymentId = String(body.data.id);
+      }
+    } catch {
+      // body vacío
+    }
+
+    if (!paymentId) {
+      const qType = url.searchParams.get("type") || url.searchParams.get("topic");
+      const qId = url.searchParams.get("data.id") || url.searchParams.get("id");
+      if (qType === "payment" && qId) paymentId = qId;
+    }
+
+    if (!paymentId) {
+      return NextResponse.json({ received: true });
+    }
+
+    const accessToken = process.env.MP_ACCESS_TOKEN;
+    if (!accessToken) {
+      console.error("[MP Webhook] MP_ACCESS_TOKEN no configurado");
+      return NextResponse.json({ received: true });
+    }
+
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => controller.abort(), 20000);
+
+    let payment: {
+      id: number | string;
+      status?: string;
+      external_reference?: string;
+      payer?: { email?: string; first_name?: string; last_name?: string };
+    } | null = null;
 
     try {
       const res = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${accessToken}` },
         signal: controller.signal,
         cache: "no-store",
       });
       clearTimeout(timer);
 
-      if (res.status === 404) {
-        console.log(`[MP Webhook] Payment ${paymentId} no existe (404)`);
-        return null;
-      }
       if (!res.ok) {
-        console.error(`[MP Webhook] MP API respondió ${res.status} (intento ${attempt}/${MAX_ATTEMPTS})`);
-        if (attempt === MAX_ATTEMPTS) return null;
-        await new Promise((r) => setTimeout(r, 1000 * attempt));
-        continue;
+        console.error(`[MP Webhook] MP API ${res.status} para payment ${paymentId}`);
+        return NextResponse.json({ received: true });
       }
-      return (await res.json()) as MpPayment;
+      payment = await res.json();
     } catch (err) {
       clearTimeout(timer);
-      const isAbort = (err as Error)?.name === "AbortError";
-      console.error(`[MP Webhook] Error fetch MP payment ${paymentId} (intento ${attempt}/${MAX_ATTEMPTS}):`, isAbort ? "timeout" : err);
-      if (attempt === MAX_ATTEMPTS) return null;
-      await new Promise((r) => setTimeout(r, 1000 * attempt));
-    }
-  }
-  return null;
-}
-
-/**
- * Mercado Pago webhook.
- * Procesa de forma síncrona. MP tolera hasta 22s.
- */
-export async function POST(req: Request) {
-  const started = Date.now();
-  const url = new URL(req.url);
-  console.log(`[MP Webhook] ▶ POST ${url.pathname}${url.search} | x-request-id="${req.headers.get("x-request-id") ?? "-"}"`);
-
-  let paymentId: string | undefined;
-
-  // 1. Intentar leer del body
-  try {
-    const body = await req.json();
-    if (body?.type === "payment" && body?.data?.id) {
-      paymentId = String(body.data.id);
-    }
-  } catch {
-    // body vacío o inválido
-  }
-
-  // 2. Fallback: query params
-  if (!paymentId) {
-    const qType = url.searchParams.get("type") || url.searchParams.get("topic");
-    const qId = url.searchParams.get("data.id") || url.searchParams.get("id");
-    if (qType === "payment" && qId) {
-      paymentId = qId;
-    }
-  }
-
-  if (!paymentId) {
-    console.log(`[MP Webhook] ⚠ sin paymentId | ${Date.now() - started}ms`);
-    return NextResponse.json({ received: true });
-  }
-
-  console.log(`[MP Webhook] ⚙ procesando paymentId=${paymentId}`);
-  await processPayment(paymentId);
-  console.log(`[MP Webhook] ✓ respondido 200 en ${Date.now() - started}ms`);
-  return NextResponse.json({ received: true });
-}
-
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  console.log(`[MP Webhook] GET ${url.pathname}${url.search} (health check)`);
-  return NextResponse.json({ ok: true });
-}
-
-async function processPayment(paymentId: string): Promise<void> {
-  try {
-    const accessToken = process.env.MP_ACCESS_TOKEN;
-    if (!accessToken) {
-      console.error("[MP Webhook] MP_ACCESS_TOKEN no configurado");
-      return;
+      console.error(`[MP Webhook] Error fetch payment ${paymentId}:`, err);
+      return NextResponse.json({ received: true });
     }
 
-    const payment = await fetchMpPayment(paymentId, accessToken);
-    if (!payment) return;
+    const externalRef = payment?.external_reference;
+    if (!payment || !externalRef) {
+      return NextResponse.json({ received: true });
+    }
 
-    const externalRef = payment.external_reference;
-    if (!externalRef) return;
+    const newStatus = STATUS_MAP[payment.status ?? ""] ?? "PENDING";
 
-    const statusMap: Record<string, "APPROVED" | "REJECTED" | "CANCELLED" | "PENDING"> = {
-      approved:   "APPROVED",
-      rejected:   "REJECTED",
-      cancelled:  "CANCELLED",
-      refunded:   "CANCELLED",
-      pending:    "PENDING",
-      in_process: "PENDING",
-      authorized: "PENDING",
-    };
-    const newStatus = statusMap[payment.status ?? ""] ?? "PENDING";
-
-    const existingOrder = await prisma.order.findUnique({
+    const existing = await prisma.order.findUnique({
       where: { mpExternalRef: externalRef },
       select: { id: true, status: true },
     });
 
-    if (!existingOrder) {
-      console.error(`[MP Webhook] Order no encontrada: mpExternalRef=${externalRef}`);
-      return;
+    if (!existing) {
+      console.error(`[MP Webhook] Order no encontrada: ${externalRef}`);
+      return NextResponse.json({ received: true });
     }
 
-    const order = await prisma.order.update({
+    await prisma.order.update({
       where: { mpExternalRef: externalRef },
       data: {
         status: newStatus,
@@ -153,110 +100,20 @@ async function processPayment(paymentId: string): Promise<void> {
       },
     });
 
-    if (existingOrder.status !== newStatus) {
+    if (existing.status !== newStatus) {
       await prisma.orderStatusHistory.create({
-        data: { orderId: order.id, status: newStatus },
+        data: { orderId: existing.id, status: newStatus },
       });
     }
 
-    if (newStatus === "APPROVED") {
-      await issueLoyaltyPromoIfNeeded(order.id);
-      await notifyWhatsApp(order);
-    }
-
-    console.log(`[MP Webhook] OK payment=${paymentId} → ${newStatus} order=${order.id.slice(0, 8)}`);
-  } catch (error) {
-    console.error("[MP Webhook] Error en processPayment:", error);
-  }
-}
-
-async function notifyWhatsApp(order: {
-  id: string;
-  mpPaymentId: string | null;
-  total: number;
-  promoCode: string | null;
-  promoDiscount: number;
-  payerName: string | null;
-  payerEmail: string | null;
-  items: unknown;
-}) {
-  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "");
-  if (!whatsapp) return;
-
-  // Serializar items del pedido
-  type OrderItem = { name?: string; quantity?: number; variantColorName?: string };
-  const items = (Array.isArray(order.items) ? order.items : []) as OrderItem[];
-  const itemLines = items
-    .map((i) => `• ${i.quantity ?? 1}x ${i.name ?? "Producto"}${i.variantColorName ? ` (${i.variantColorName})` : ""}`)
-    .join("\n");
-
-  const promoLine = order.promoCode
-    ? `\n🏷 Promo: ${order.promoCode} (-${order.promoDiscount}%)`
-    : "";
-
-  const message = [
-    "✅ *NUEVO PEDIDO APROBADO — 3DMORE*",
-    "",
-    `📦 Pedido: \`${order.id.slice(0, 8)}\``,
-    `💳 Pago MP: \`${order.mpPaymentId}\``,
-    "",
-    "*Productos:*",
-    itemLines,
-    promoLine,
-    "",
-    `💰 *Total: $${order.total.toFixed(0)} UYU*`,
-    order.payerName ? `👤 ${order.payerName}` : "",
-    order.payerEmail ? `📧 ${order.payerEmail}` : "",
-  ]
-    .filter((l) => l !== "")
-    .join("\n");
-
-  const url = `https://api.whatsapp.com/send?phone=${whatsapp}&text=${encodeURIComponent(message)}`;
-
-  // Usar la API de WhatsApp Business si está configurada, si no solo loguear la URL
-  console.log("[MP Webhook] Pedido aprobado — notificación WhatsApp:", url);
-
-  // Si tenés WhatsApp Business API configurada, enviar acá:
-  // await fetch("https://api.whatsapp.com/...", { ... });
-}
-
-/**
- * Emite un código promocional de fidelidad para el cliente tras
- * una compra aprobada. El código es único por cliente y da 10% OFF
- * durante los próximos 3 meses.
- */
-async function issueLoyaltyPromoIfNeeded(orderId: string): Promise<void> {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { userId: true, loyaltyPromoIssued: true, customerFirstName: true },
-  });
-  if (!order?.userId || order.loyaltyPromoIssued) return;
-
-  // Generar código único tipo VIP-XXXXXXXX
-  const suffix = Math.random().toString(36).slice(2, 10).toUpperCase();
-  const code = `VIP-${suffix}`;
-
-  const validUntil = new Date();
-  validUntil.setMonth(validUntil.getMonth() + 3);
-
-  try {
-    await prisma.promoCode.create({
-      data: {
-        code,
-        discountPct: 10,
-        isActive: true,
-        validUntil,
-        userId: order.userId,
-        usageLimit: 1,
-      },
-    });
-    await prisma.order.update({
-      where: { id: orderId },
-      data: { loyaltyPromoIssued: true },
-    });
-    console.log(`[Loyalty] Emitido ${code} para user ${order.userId}`);
+    console.log(`[MP Webhook] OK payment=${paymentId} → ${newStatus}`);
+    return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("[Loyalty] Error al emitir promo:", err);
+    console.error("[MP Webhook] Error inesperado:", err);
+    return NextResponse.json({ received: true });
   }
 }
 
+export async function GET() {
+  return NextResponse.json({ ok: true });
+}
