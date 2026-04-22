@@ -127,6 +127,9 @@ model Order {
   customerPhone      String?
   customerEmail      String?
   loyaltyPromoIssued Boolean        @default(false)
+  reviewRating       Int?
+  reviewText         String?
+  reviewImageUrl     String?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
 
@@ -136,6 +139,9 @@ model Order {
 enum OrderStatus {
   PENDING
   APPROVED
+  CONFIRMED
+  READY_FOR_DELIVERY
+  DELIVERED
   REJECTED
   CANCELLED
 }

@@ -7,11 +7,11 @@ import {
   ChevronLeft, ChevronDown, ChevronUp,
   CheckCircle, Clock, XCircle, Package,
   Home, MapPin, Truck, Tag, CreditCard,
-  MessageCircle, Info,
+  MessageCircle, Info, Star,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
-type OrderStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+type OrderStatus = "PENDING" | "APPROVED" | "CONFIRMED" | "READY_FOR_DELIVERY" | "DELIVERED" | "REJECTED" | "CANCELLED";
 type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
 
 interface OrderItem {
@@ -48,17 +48,35 @@ interface Order {
   customerLastName: string | null;
   customerPhone: string | null;
   customerEmail: string | null;
+  reviewRating: number | null;
+  reviewText: string | null;
+  reviewImageUrl: string | null;
 }
 
 const STATUS: Record<OrderStatus, { label: string; detail: string; color: string; bg: string; Icon: React.ElementType }> = {
   PENDING:   {
-    label: "Pendiente de pago",
-    detail: "El pago está siendo procesado. Si realizaste el pago, esperá unos minutos.",
+    label: "Pendiente de confirmación",
+    detail: "Tu pedido está en espera. Nos comunicaremos a la brevedad para confirmar.",
     color: "var(--warning, #f59e0b)", bg: "rgba(245,158,11,0.1)", Icon: Clock,
   },
   APPROVED:  {
-    label: "Pago confirmado",
-    detail: "Tu pago fue acreditado correctamente. El pedido está en preparación.",
+    label: "Pago confirmado — pendiente de confirmación",
+    detail: "Tu pago fue acreditado. El pedido está pendiente de confirmación de nuestra parte.",
+    color: "#a78bfa", bg: "rgba(167,139,250,0.1)", Icon: CheckCircle,
+  },
+  CONFIRMED: {
+    label: "Pedido en proceso",
+    detail: "¡Confirmado! Tu pedido está siendo preparado. Te avisamos cuando esté listo para envío o retiro.",
+    color: "var(--accent-blue)", bg: "rgba(59,130,246,0.1)", Icon: Package,
+  },
+  READY_FOR_DELIVERY: {
+    label: "Listo para entrega",
+    detail: "Tu pedido está listo. Nos comunicaremos para coordinar la entrega o el retiro.",
+    color: "#34d399", bg: "rgba(52,211,153,0.1)", Icon: Truck,
+  },
+  DELIVERED: {
+    label: "Entregado — ¡Completado!",
+    detail: "¡Tu pedido fue entregado! Esperamos que lo disfrutes mucho.",
     color: "var(--success)", bg: "rgba(34,197,94,0.1)", Icon: CheckCircle,
   },
   REJECTED:  {
@@ -85,6 +103,13 @@ export default function AccountOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [fetching, setFetching] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [reviewOrderId, setReviewOrderId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewPhoto, setReviewPhoto] = useState<File | null>(null);
+  const [reviewPhotoPreview, setReviewPhotoPreview] = useState<string | null>(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.push("/");
@@ -96,6 +121,45 @@ export default function AccountOrdersPage() {
       .then(async (r) => { if (r.ok) { const d = await r.json(); setOrders(d.orders); } })
       .finally(() => setFetching(false));
   }, [user]);
+
+  const handleCancel = async (id: string) => {
+    setCancellingId(id);
+    const res = await fetch(`/api/account/orders/${id}/cancel`, { method: "POST" });
+    if (res.ok) {
+      setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status: "CANCELLED" } : o));
+    }
+    setCancellingId(null);
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setReviewPhoto(f);
+    if (f) {
+      const url = URL.createObjectURL(f);
+      setReviewPhotoPreview(url);
+    } else {
+      setReviewPhotoPreview(null);
+    }
+  };
+
+  const handleSubmitReview = async (orderId: string) => {
+    setSubmittingReview(true);
+    const fd = new FormData();
+    fd.append("rating", String(reviewRating));
+    fd.append("text", reviewText);
+    if (reviewPhoto) fd.append("photo", reviewPhoto);
+    const res = await fetch(`/api/account/orders/${orderId}/review`, { method: "POST", body: fd });
+    if (res.ok) {
+      const data = await res.json();
+      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, ...data } : o));
+      setReviewOrderId(null);
+      setReviewText("");
+      setReviewRating(5);
+      setReviewPhoto(null);
+      setReviewPhotoPreview(null);
+    }
+    setSubmittingReview(false);
+  };
 
   if (loading || fetching) {
     return (
@@ -355,6 +419,116 @@ export default function AccountOrdersPage() {
                             <CreditCard size={16} /> Reintentar pago
                           </button>
                         </Link>
+                      )}
+
+                      {/* Cancelar pedido — solo si PENDING */}
+                      {order.status === "PENDING" && (
+                        <button
+                          onClick={() => handleCancel(order.id)}
+                          disabled={cancellingId === order.id}
+                          style={{
+                            width: "100%", padding: "0.7rem",
+                            background: "rgba(239,68,68,0.06)",
+                            border: "1px solid rgba(239,68,68,0.25)",
+                            color: "var(--danger)", borderRadius: "var(--radius-pill)",
+                            fontWeight: 600, cursor: cancellingId === order.id ? "not-allowed" : "pointer",
+                            opacity: cancellingId === order.id ? 0.6 : 1,
+                            fontSize: "0.9rem",
+                          }}
+                        >
+                          {cancellingId === order.id ? "Cancelando…" : "Cancelar pedido"}
+                        </button>
+                      )}
+
+                      {/* Reseña — solo si DELIVERED */}
+                      {order.status === "DELIVERED" && (
+                        order.reviewRating !== null ? (
+                          <div style={{
+                            padding: "1rem", borderRadius: "var(--radius-lg)",
+                            background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)",
+                          }}>
+                            <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>Tu reseña</p>
+                            <div style={{ display: "flex", gap: 3, marginBottom: "0.5rem" }}>
+                              {[1,2,3,4,5].map((n) => (
+                                <Star key={n} size={16} fill={n <= (order.reviewRating ?? 0) ? "#f59e0b" : "transparent"} color="#f59e0b" />
+                              ))}
+                            </div>
+                            {order.reviewText && <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)" }}>{order.reviewText}</p>}
+                            {order.reviewImageUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={order.reviewImageUrl} alt="foto reseña" style={{ marginTop: "0.75rem", width: "100%", maxWidth: 280, borderRadius: "var(--radius-md)", objectFit: "cover" }} />
+                            )}
+                          </div>
+                        ) : reviewOrderId === order.id ? (
+                          <div style={{
+                            padding: "1.25rem", borderRadius: "var(--radius-lg)",
+                            background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)",
+                          }}>
+                            <p style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--text-secondary)", marginBottom: "1rem" }}>Dejar reseña</p>
+
+                            {/* Stars */}
+                            <div style={{ display: "flex", gap: 6, marginBottom: "0.85rem" }}>
+                              {[1,2,3,4,5].map((n) => (
+                                <button key={n} onClick={() => setReviewRating(n)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2 }}>
+                                  <Star size={26} fill={n <= reviewRating ? "#f59e0b" : "transparent"} color="#f59e0b" />
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Texto */}
+                            <textarea
+                              className="admin-input"
+                              placeholder="Contanos cómo te fue con tu pedido (opcional)…"
+                              value={reviewText}
+                              onChange={(e) => setReviewText(e.target.value)}
+                              rows={3}
+                              style={{ width: "100%", resize: "vertical", marginBottom: "0.75rem" }}
+                            />
+
+                            {/* Foto */}
+                            <label style={{ display: "block", marginBottom: "0.75rem" }}>
+                              <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "0.35rem" }}>
+                                Foto de tu pedido en el casco (opcional)
+                              </p>
+                              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoChange} style={{ fontSize: "0.82rem" }} />
+                              {reviewPhotoPreview && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={reviewPhotoPreview} alt="preview" style={{ marginTop: "0.5rem", width: 120, height: 90, objectFit: "cover", borderRadius: "var(--radius-md)" }} />
+                              )}
+                            </label>
+
+                            <div style={{ display: "flex", gap: "0.6rem" }}>
+                              <button
+                                onClick={() => handleSubmitReview(order.id)}
+                                disabled={submittingReview}
+                                className="btn-primary"
+                                style={{ flex: 1, background: "var(--accent-pink)", fontWeight: 700, opacity: submittingReview ? 0.6 : 1 }}
+                              >
+                                {submittingReview ? "Enviando…" : "Enviar reseña"}
+                              </button>
+                              <button
+                                onClick={() => setReviewOrderId(null)}
+                                style={{ padding: "0.6rem 1rem", background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-secondary)", borderRadius: "var(--radius-pill)", cursor: "pointer" }}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setReviewOrderId(order.id); setReviewRating(5); setReviewText(""); setReviewPhoto(null); setReviewPhotoPreview(null); }}
+                            style={{
+                              width: "100%", padding: "0.7rem",
+                              background: "rgba(245,158,11,0.08)",
+                              border: "1px solid rgba(245,158,11,0.3)",
+                              color: "#f59e0b", borderRadius: "var(--radius-pill)",
+                              fontWeight: 600, cursor: "pointer", fontSize: "0.9rem",
+                              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                            }}
+                          >
+                            <Star size={15} /> Dejar una reseña
+                          </button>
+                        )
                       )}
                     </div>
                   )}

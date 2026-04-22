@@ -104,8 +104,8 @@ export default function ProductsClient({ initialProducts }: Props) {
       </div>
 
       {/* Filtros */}
-      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ position: "relative", flex: "1 1 240px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.25rem" }}>
+        <div style={{ position: "relative" }}>
           <Search size={15} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />
           <input
             className="admin-input"
@@ -115,29 +115,48 @@ export default function ProductsClient({ initialProducts }: Props) {
             style={{ paddingLeft: 36 }}
           />
         </div>
-        {(["ALL", "ACTIVE", "HIDDEN"] as const).map((s) => {
-          const label = s === "ALL" ? "Todos" : s === "ACTIVE" ? "Activos" : "Ocultos";
-          const active = filterStatus === s;
-          return (
-            <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }} style={{ padding: "0.4rem 0.9rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(59,130,246,0.1)" : "transparent", color: active ? "var(--accent-blue)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400 }}>
-              {label}
+        <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", alignItems: "center" }}>
+          {/* Grupo: visibilidad */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.04em" }}>Estado</span>
+            <div style={{ display: "flex", gap: "0.35rem" }}>
+              {(["ALL", "ACTIVE", "HIDDEN"] as const).map((s) => {
+                const label = s === "ALL" ? "Todos" : s === "ACTIVE" ? "Activos" : "Ocultos";
+                const active = filterStatus === s;
+                return (
+                  <button key={s} onClick={() => { setFilterStatus(s); setPage(1); }} style={{ padding: "0.35rem 0.85rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(59,130,246,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(59,130,246,0.1)" : "transparent", color: active ? "var(--accent-blue)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400, transition: "all 0.15s" }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Separador */}
+          <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.08)", flexShrink: 0 }} />
+
+          {/* Grupo: oferta */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", fontWeight: 500, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.04em" }}>Precio</span>
+            <div style={{ display: "flex", gap: "0.35rem" }}>
+              {(["ALL", "OFFER", "REGULAR"] as const).map((s) => {
+                const label = s === "ALL" ? "Todos" : s === "OFFER" ? "En oferta" : "Sin oferta";
+                const active = filterOffer === s;
+                return (
+                  <button key={s} onClick={() => { setFilterOffer(s); setPage(1); }} style={{ padding: "0.35rem 0.85rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(255,42,133,0.08)" : "transparent", color: active ? "var(--accent-pink)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400, transition: "all 0.15s" }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {(q || filterStatus !== "ALL" || filterOffer !== "ALL") && (
+            <button onClick={resetFilters} style={{ marginLeft: "auto", padding: "0.35rem 0.75rem", borderRadius: "var(--radius-pill)", border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.78rem" }}>
+              Limpiar filtros
             </button>
-          );
-        })}
-        {(["ALL", "OFFER", "REGULAR"] as const).map((s) => {
-          const label = s === "ALL" ? "Todas" : s === "OFFER" ? "En oferta" : "Sin oferta";
-          const active = filterOffer === s;
-          return (
-            <button key={s} onClick={() => { setFilterOffer(s); setPage(1); }} style={{ padding: "0.4rem 0.9rem", borderRadius: "var(--radius-pill)", border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`, background: active ? "rgba(255,42,133,0.08)" : "transparent", color: active ? "var(--accent-pink)" : "var(--text-secondary)", cursor: "pointer", fontSize: "0.82rem", fontWeight: active ? 600 : 400 }}>
-              {label}
-            </button>
-          );
-        })}
-        {(q || filterStatus !== "ALL" || filterOffer !== "ALL") && (
-          <button onClick={resetFilters} style={{ padding: "0.4rem 0.75rem", borderRadius: "var(--radius-pill)", border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontSize: "0.78rem" }}>
-            Limpiar
-          </button>
-        )}
+          )}
+        </div>
       </div>
 
       {filtered.length === 0 ? (

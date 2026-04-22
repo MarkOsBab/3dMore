@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ShoppingBag, CheckCircle, Clock, XCircle, ChevronDown, ChevronUp, RefreshCcw, Home, Package, MapPin, Phone, FileText, Mail, Search } from "lucide-react";
+import { ShoppingBag, CheckCircle, Clock, XCircle, ChevronDown, ChevronUp, RefreshCcw, Home, Package, MapPin, Phone, FileText, Mail, Search, Truck, Star } from "lucide-react";
 import Pagination from "@/components/admin/Pagination";
 
 const PAGE_SIZE = 10;
 
-type OrderStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+type OrderStatus = "PENDING" | "APPROVED" | "CONFIRMED" | "READY_FOR_DELIVERY" | "DELIVERED" | "REJECTED" | "CANCELLED";
 type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
 
 interface OrderItem {
@@ -61,10 +61,19 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
-  APPROVED:  { label: "Aprobado",  color: "var(--success)",  bg: "rgba(34,197,94,0.12)",   Icon: CheckCircle },
-  PENDING:   { label: "Pendiente", color: "var(--warning)",  bg: "rgba(245,158,11,0.12)",  Icon: Clock },
-  REJECTED:  { label: "Rechazado", color: "var(--danger)",   bg: "rgba(239,68,68,0.12)",   Icon: XCircle },
-  CANCELLED: { label: "Cancelado", color: "var(--danger)",   bg: "rgba(239,68,68,0.12)",   Icon: XCircle },
+  PENDING:            { label: "Pend. de pago",     color: "var(--warning, #f59e0b)",  bg: "rgba(245,158,11,0.12)",  Icon: Clock },
+  APPROVED:           { label: "Pend. confirmar",   color: "#a78bfa",                  bg: "rgba(167,139,250,0.12)", Icon: CheckCircle },
+  CONFIRMED:          { label: "En proceso",         color: "var(--accent-blue)",       bg: "rgba(59,130,246,0.12)",  Icon: Package },
+  READY_FOR_DELIVERY: { label: "Listo p/ entrega",  color: "#34d399",                  bg: "rgba(52,211,153,0.12)",  Icon: Truck },
+  DELIVERED:          { label: "Entregado",          color: "var(--success)",           bg: "rgba(34,197,94,0.12)",   Icon: CheckCircle },
+  REJECTED:           { label: "Rechazado",          color: "var(--danger)",            bg: "rgba(239,68,68,0.12)",   Icon: XCircle },
+  CANCELLED:          { label: "Cancelado",          color: "rgba(255,255,255,0.35)",  bg: "rgba(255,255,255,0.05)", Icon: XCircle },
+};
+
+const NEXT_ACTION: Partial<Record<OrderStatus, { label: string; next: OrderStatus; color: string }>> = {
+  APPROVED:           { label: "Confirmar pedido",      next: "CONFIRMED",          color: "#a78bfa" },
+  CONFIRMED:          { label: "Listo para entregar",   next: "READY_FOR_DELIVERY", color: "var(--accent-blue)" },
+  READY_FOR_DELIVERY: { label: "Marcar como entregado", next: "DELIVERED",          color: "#34d399" },
 };
 
 export default function OrdersClient({ initialOrders }: Props) {
@@ -74,12 +83,26 @@ export default function OrdersClient({ initialOrders }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const refresh = async () => {
     setRefreshing(true);
     const res = await fetch("/api/admin/orders");
     if (res.ok) setOrders(await res.json());
     setRefreshing(false);
+  };
+
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    setUpdatingId(id);
+    const res = await fetch(`/api/admin/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    if (res.ok) {
+      setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
+    }
+    setUpdatingId(null);
   };
 
   const q = search.toLowerCase().trim();
@@ -95,11 +118,14 @@ export default function OrdersClient({ initialOrders }: Props) {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const counts = {
-    ALL:       orders.length,
-    APPROVED:  orders.filter((o) => o.status === "APPROVED").length,
-    PENDING:   orders.filter((o) => o.status === "PENDING").length,
-    REJECTED:  orders.filter((o) => o.status === "REJECTED").length,
-    CANCELLED: orders.filter((o) => o.status === "CANCELLED").length,
+    ALL:                orders.length,
+    PENDING:            orders.filter((o) => o.status === "PENDING").length,
+    APPROVED:           orders.filter((o) => o.status === "APPROVED").length,
+    CONFIRMED:          orders.filter((o) => o.status === "CONFIRMED").length,
+    READY_FOR_DELIVERY: orders.filter((o) => o.status === "READY_FOR_DELIVERY").length,
+    DELIVERED:          orders.filter((o) => o.status === "DELIVERED").length,
+    REJECTED:           orders.filter((o) => o.status === "REJECTED").length,
+    CANCELLED:          orders.filter((o) => o.status === "CANCELLED").length,
   };
 
   return (
@@ -145,7 +171,7 @@ export default function OrdersClient({ initialOrders }: Props) {
 
       {/* Filtros */}
       <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
-        {(["ALL", "APPROVED", "PENDING", "REJECTED", "CANCELLED"] as const).map((s) => {
+        {(["ALL", "PENDING", "APPROVED", "CONFIRMED", "READY_FOR_DELIVERY", "DELIVERED", "REJECTED", "CANCELLED"] as const).map((s) => {
           const active = filter === s;
           const cfg = s !== "ALL" ? STATUS_CONFIG[s] : null;
           return (
@@ -352,6 +378,53 @@ export default function OrdersClient({ initialOrders }: Props) {
                         </div>
                       );
                     })()}
+
+                    {/* Acciones de estado */}
+                    {order.status !== "CANCELLED" && order.status !== "REJECTED" && (
+                      <div style={{ paddingTop: "0.75rem", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+                        {NEXT_ACTION[order.status] && (() => {
+                          const action = NEXT_ACTION[order.status]!;
+                          return (
+                            <button
+                              onClick={() => updateStatus(order.id, action.next)}
+                              disabled={updatingId === order.id}
+                              style={{
+                                flex: 1, minWidth: 140, padding: "0.6rem 1rem",
+                                background: `${action.color}22`,
+                                border: `1px solid ${action.color}55`,
+                                color: action.color,
+                                borderRadius: "var(--radius-pill)",
+                                fontWeight: 600, fontSize: "0.83rem",
+                                cursor: updatingId === order.id ? "not-allowed" : "pointer",
+                                opacity: updatingId === order.id ? 0.6 : 1,
+                                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                              }}
+                            >
+                              {updatingId === order.id ? <span className="spinner" style={{ width: 13, height: 13 }} /> : null}
+                              {action.label}
+                            </button>
+                          );
+                        })()}
+                        {order.status !== "DELIVERED" && (
+                          <button
+                            onClick={() => updateStatus(order.id, "CANCELLED")}
+                            disabled={updatingId === order.id}
+                            style={{
+                              padding: "0.6rem 1rem",
+                              background: "rgba(239,68,68,0.06)",
+                              border: "1px solid rgba(239,68,68,0.3)",
+                              color: "var(--danger)",
+                              borderRadius: "var(--radius-pill)",
+                              fontWeight: 600, fontSize: "0.83rem",
+                              cursor: updatingId === order.id ? "not-allowed" : "pointer",
+                              opacity: updatingId === order.id ? 0.6 : 1,
+                            }}
+                          >
+                            Cancelar pedido
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

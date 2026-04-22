@@ -30,6 +30,9 @@ export async function GET() {
         customerLastName: true,
         customerPhone: true,
         customerEmail: true,
+        reviewRating: true,
+        reviewText: true,
+        reviewImageUrl: true,
       },
     }),
     prisma.promoCode.findMany({
