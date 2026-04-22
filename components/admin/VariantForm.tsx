@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { createVariant, deleteVariant } from "@/lib/actions";
+import { createVariant, deleteVariant, updateVariant } from "@/lib/actions";
 import { ImageUploader } from "./ImageUploader";
-import { Trash2, Plus, Layers, X, Palette, Sparkles } from "lucide-react";
+import { Trash2, Plus, Layers, X, Palette, Sparkles, Pencil } from "lucide-react";
 import { useConfirm, useAlert } from "@/components/admin/ConfirmDialog";
 
 interface Variant {
@@ -30,6 +30,7 @@ export default function VariantForm({ productId, productName, productPrice, vari
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [exitingId, setExitingId] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<Variant | null>(null);
   const [imageUrl, setImageUrl] = useState("");
   const [colorName, setColorName] = useState("");
   const [useCustomPrice, setUseCustomPrice] = useState(false);
@@ -44,23 +45,46 @@ export default function VariantForm({ productId, productName, productPrice, vari
     setPrice("");
     setIsOffer(false);
     setDiscountPct("0");
+    setEditTarget(null);
   };
 
-  const handleAdd = async () => {
+  const handleStartEdit = (v: Variant) => {
+    setEditTarget(v);
+    setColorName(v.colorName);
+    setImageUrl(v.imageUrl);
+    setUseCustomPrice(v.price !== null);
+    setPrice(v.price?.toString() ?? "");
+    setIsOffer(v.isOffer);
+    setDiscountPct(v.discountPct?.toString() ?? "0");
+  };
+
+  const handleSave = async () => {
     if (!colorName.trim()) { await alert("Ingresá el nombre del color"); return; }
     if (!imageUrl) { await alert("Subí una imagen para la variante"); return; }
     setLoading(true);
     try {
-      await createVariant({
-        productId,
-        colorName: colorName.trim(),
-        imageUrl,
-        price: useCustomPrice && price ? parseFloat(price) : null,
-        isOffer,
-        discountPct: isOffer ? parseFloat(discountPct) || 0 : 0,
-      });
+      if (editTarget) {
+        await updateVariant(editTarget.id, productId, {
+          colorName: colorName.trim(),
+          imageUrl,
+          price: useCustomPrice && price ? parseFloat(price) : null,
+          isOffer,
+          discountPct: isOffer ? parseFloat(discountPct) || 0 : 0,
+        });
+      } else {
+        await createVariant({
+          productId,
+          colorName: colorName.trim(),
+          imageUrl,
+          price: useCustomPrice && price ? parseFloat(price) : null,
+          isOffer,
+          discountPct: isOffer ? parseFloat(discountPct) || 0 : 0,
+        });
+      }
       resetForm();
       onSaved();
+    } catch {
+      await alert("Error al guardar la variante. Intentá de nuevo.");
     } finally {
       setLoading(false);
     }
@@ -142,6 +166,15 @@ export default function VariantForm({ productId, productName, productPrice, vari
                       </p>
                     </div>
                     <button
+                      onClick={() => handleStartEdit(v)}
+                      disabled={!!deletingId || editTarget?.id === v.id}
+                      className="admin-icon-btn"
+                      title="Editar variante"
+                      style={{ opacity: editTarget?.id === v.id ? 0.4 : 1 }}
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
                       onClick={() => handleDelete(v.id)}
                       disabled={!!deletingId}
                       className="admin-icon-btn danger"
@@ -157,9 +190,22 @@ export default function VariantForm({ productId, productName, productPrice, vari
           )}
         </div>
 
-        {/* Add new variant */}
+        {/* Add / Edit variant */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "1.5rem" }}>
-          <SectionTitle icon={<Plus size={13} />} label="Nueva variante" />
+          {editTarget ? (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
+              <SectionTitle icon={<Pencil size={13} />} label={`Editando: ${editTarget.colorName}`} />
+              <button
+                type="button"
+                onClick={resetForm}
+                style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontSize: "0.8rem" }}
+              >
+                <X size={13} /> Cancelar edición
+              </button>
+            </div>
+          ) : (
+            <SectionTitle icon={<Plus size={13} />} label="Nueva variante" />
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
@@ -276,12 +322,12 @@ export default function VariantForm({ productId, productName, productPrice, vari
               <button type="button" onClick={onClose} style={secondaryBtnStyle}>Cerrar</button>
               <button
                 type="button"
-                onClick={handleAdd}
+                onClick={handleSave}
                 disabled={loading}
                 style={{ ...primaryBtnStyle, opacity: loading ? 0.65 : 1 }}
               >
-                <Plus size={16} />
-                {loading ? "Guardando…" : "Agregar Variante"}
+                {editTarget ? <Pencil size={16} /> : <Plus size={16} />}
+                {loading ? "Guardando…" : editTarget ? "Guardar Cambios" : "Agregar Variante"}
               </button>
             </div>
           </div>
