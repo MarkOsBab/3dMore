@@ -113,6 +113,7 @@ export async function POST(req: Request) {
           }
         : undefined,
       ...(isPublicUrl ? { auto_return: "approved" as const } : {}),
+      notification_url: `${origin}/api/webhooks/mp`,
       statement_descriptor: "3DMORE",
       external_reference: `order_${Date.now()}_${user.id.slice(0, 8)}`,
     };
