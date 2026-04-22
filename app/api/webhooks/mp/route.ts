@@ -6,8 +6,7 @@ export const maxDuration = 60;
 
 /**
  * Mercado Pago webhook.
- * Responde 200 ANTES de procesar — evita timeouts de MP (5s).
- * El procesamiento continúa en background (Vercel Node.js runtime).
+ * Procesa de forma síncrona. MP tolera hasta 22s, Vercel hasta maxDuration.
  */
 export async function POST(req: Request) {
   let paymentId: string | undefined;
@@ -18,15 +17,15 @@ export async function POST(req: Request) {
       paymentId = String(body.data.id);
     }
   } catch {
-    // body inválido, ignorar
+    // body inválido
+    return NextResponse.json({ received: true });
   }
 
-  // Responder 200 a MP INMEDIATAMENTE — sin esperar ningún procesamiento
-  if (paymentId) {
-    // fire-and-forget: Vercel mantiene la función viva hasta que termine
-    void processPayment(paymentId);
+  if (!paymentId) {
+    return NextResponse.json({ received: true });
   }
 
+  await processPayment(paymentId);
   return NextResponse.json({ received: true });
 }
 
