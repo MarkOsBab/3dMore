@@ -64,15 +64,35 @@ model PromoCode {
 }
 
 model UserProfile {
-  id         String   @id // supabase auth user id
+  id         String         @id // supabase auth user id
   email      String?
   firstName  String?
   lastName   String?
   documentId String?
   phone      String?
   avatarUrl  String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  addresses  SavedAddress[]
+}
+
+model SavedAddress {
+  id           String      @id @default(cuid())
+  userId       String
+  user         UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label        String?
+  street       String
+  doorNumber   String
+  corner       String?
+  neighborhood String
+  postalCode   String?
+  zoneId       String
+  zoneName     String
+  isDefault    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+
+  @@index([userId])
 }
 
 model ShippingZone {

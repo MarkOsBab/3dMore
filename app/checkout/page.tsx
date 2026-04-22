@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   User, Truck, CreditCard, CheckCircle2, ChevronRight, ChevronLeft,
-  Home, Package, MapPin, Phone, FileText, Info,
+  Home, Package, MapPin, Phone, FileText, Info, Trash2, Star,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useCart, getUnitPrice, type CartProduct } from "@/lib/CartContext";
@@ -17,6 +17,27 @@ interface ShippingZone {
   id: string;
   name: string;
   cost: number;
+}
+
+interface AddressForm {
+  street: string;
+  doorNumber: string;
+  corner: string;
+  neighborhood: string;
+  postalCode: string;
+}
+
+interface SavedAddress {
+  id: string;
+  label: string | null;
+  street: string;
+  doorNumber: string;
+  corner: string | null;
+  neighborhood: string;
+  postalCode: string | null;
+  zoneId: string;
+  zoneName: string;
+  isDefault: boolean;
 }
 
 export default function CheckoutPage() {
@@ -41,7 +62,11 @@ export default function CheckoutPage() {
   // Step 2 — Envío
   const [shippingMethod, setShippingMethod] = useState<ShippingMethod>("HOME_MVD");
   const [zoneId, setZoneId] = useState("");
-  const [address, setAddress] = useState("");
+  const [addrForm, setAddrForm] = useState<AddressForm>({ street: "", doorNumber: "", corner: "", neighborhood: "", postalCode: "" });
+  const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [saveAddress, setSaveAddress] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
   const [agency, setAgency] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -66,6 +91,14 @@ export default function CheckoutPage() {
       });
     }
   }, [profile]);
+
+  // Cargar direcciones guardadas cuando el usuario esté disponible
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/shipping/addresses").then(async (r) => {
+      if (r.ok) setSavedAddresses(await r.json());
+    });
+  }, [user]);
 
   // Redirigir al home si el carrito está vacío
   useEffect(() => {
@@ -121,10 +154,60 @@ export default function CheckoutPage() {
     }
   };
 
+  const composeAddress = (a: AddressForm) =>
+    `${a.street} ${a.doorNumber}${a.corner ? ` esq. ${a.corner}` : ""}, ${a.neighborhood}${a.postalCode ? ` (CP: ${a.postalCode})` : ""}`;
+
   const canProceedFromShipping = () => {
-    if (shippingMethod === "HOME_MVD") return Boolean(zoneId && address.trim());
+    if (shippingMethod === "HOME_MVD") {
+      if (selectedSavedId) return true;
+      return Boolean(zoneId && addrForm.street.trim() && addrForm.doorNumber.trim() && addrForm.neighborhood.trim());
+    }
     if (shippingMethod === "AGENCY") return Boolean(agency.trim());
-    return true; // PICKUP
+    return true;
+  };
+
+  const handleContinueFromShipping = async () => {
+    if (shippingMethod === "HOME_MVD" && saveAddress && !selectedSavedId && user) {
+      setSavingAddress(true);
+      try {
+        await fetch("/api/shipping/addresses", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...addrForm, zoneId, zoneName: selectedZone?.name }),
+        });
+        const res = await fetch("/api/shipping/addresses");
+        if (res.ok) setSavedAddresses(await res.json());
+      } finally {
+        setSavingAddress(false);
+      }
+    }
+    setStep(2);
+  };
+
+  const handleSelectSavedAddress = (addr: SavedAddress | null) => {
+    if (addr) {
+      setSelectedSavedId(addr.id);
+      setZoneId(addr.zoneId);
+      setAddrForm({
+        street: addr.street,
+        doorNumber: addr.doorNumber,
+        corner: addr.corner ?? "",
+        neighborhood: addr.neighborhood,
+        postalCode: addr.postalCode ?? "",
+      });
+    } else {
+      setSelectedSavedId(null);
+    }
+  };
+
+  const handleDeleteSavedAddress = async (id: string) => {
+    await fetch(`/api/shipping/addresses/${id}`, { method: "DELETE" });
+    setSavedAddresses((prev) => prev.filter((a) => a.id !== id));
+    if (selectedSavedId === id) {
+      setSelectedSavedId(null);
+      setZoneId("");
+      setAddrForm({ street: "", doorNumber: "", corner: "", neighborhood: "", postalCode: "" });
+    }
   };
 
   const payWithMP = async () => {
@@ -142,7 +225,7 @@ export default function CheckoutPage() {
           shippingData: {
             zoneId: shippingMethod === "HOME_MVD" ? zoneId : undefined,
             zoneName: selectedZone?.name,
-            address: shippingMethod === "HOME_MVD" ? address : undefined,
+            address: shippingMethod === "HOME_MVD" ? composeAddress(addrForm) : undefined,
             agency: shippingMethod === "AGENCY" ? agency : undefined,
             notes: notes || undefined,
           },
@@ -181,7 +264,7 @@ export default function CheckoutPage() {
 
     const shippingText =
       shippingMethod === "HOME_MVD"
-        ? `${E.house} Env\u00edo a domicilio \u2014 ${selectedZone?.name}: ${address} ($${shippingCost} efectivo/transferencia al entregar)`
+        ? `${E.house} Env\u00edo a domicilio \u2014 ${selectedZone?.name}: ${composeAddress(addrForm)} ($${shippingCost} efectivo/transferencia al entregar)`
         : shippingMethod === "AGENCY"
         ? `${E.box} Env\u00edo por agencia DAC \u2014 ${agency} (pago al retirar)`
         : `${E.store} Retiro en domicilio del vendedor (a coordinar)`;
@@ -245,10 +328,16 @@ export default function CheckoutPage() {
             )}
             {step === 1 && (
               <StepShipping
+                user={user}
                 zones={zones}
                 method={shippingMethod} setMethod={setShippingMethod}
                 zoneId={zoneId} setZoneId={setZoneId}
-                address={address} setAddress={setAddress}
+                addrForm={addrForm} setAddrForm={setAddrForm}
+                savedAddresses={savedAddresses}
+                selectedSavedId={selectedSavedId}
+                onSelectSaved={handleSelectSavedAddress}
+                onDeleteSaved={handleDeleteSavedAddress}
+                saveAddress={saveAddress} setSaveAddress={setSaveAddress}
                 agency={agency} setAgency={setAgency}
                 notes={notes} setNotes={setNotes}
               />
@@ -263,7 +352,7 @@ export default function CheckoutPage() {
                 method={shippingMethod}
                 shippingCost={shippingCost}
                 zoneName={selectedZone?.name}
-                address={address}
+                address={composeAddress(addrForm)}
                 agency={agency}
                 notes={notes}
                 form={form}
@@ -284,17 +373,17 @@ export default function CheckoutPage() {
                 </button>
                 {step < 2 && (
                   <button
-                    onClick={() => setStep((step + 1) as Step)}
-                    disabled={step === 1 && !canProceedFromShipping()}
+                    onClick={() => step === 1 ? handleContinueFromShipping() : setStep((step + 1) as Step)}
+                    disabled={(step === 1 && !canProceedFromShipping()) || savingAddress}
                     style={{
                       display: "flex", alignItems: "center", gap: 6,
                       padding: "0.75rem 1.3rem", background: "var(--accent-pink)",
                       color: "white", border: "none", borderRadius: "var(--radius-pill)",
                       cursor: "pointer", fontWeight: 600,
-                      opacity: step === 1 && !canProceedFromShipping() ? 0.4 : 1,
+                      opacity: (step === 1 && !canProceedFromShipping()) || savingAddress ? 0.4 : 1,
                     }}
                   >
-                    Continuar <ChevronRight size={16} />
+                    {savingAddress ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Guardando…</> : <>Continuar <ChevronRight size={16} /></>}
                   </button>
                 )}
               </div>
@@ -414,7 +503,8 @@ function StepProfile({ user, profile, form, setForm, signIn, onSave, saving }: a
 
 // ───────────────────────────────────────────────────────────────── STEP 2 — SHIPPING
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function StepShipping({ zones, method, setMethod, zoneId, setZoneId, address, setAddress, agency, setAgency, notes, setNotes }: any) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrForm, setAddrForm, savedAddresses, selectedSavedId, onSelectSaved, onDeleteSaved, saveAddress, setSaveAddress, agency, setAgency, notes, setNotes }: any) {
   return (
     <div>
       <h2 style={{ fontSize: "1.35rem", fontWeight: 700, marginBottom: 4 }}>¿Cómo querés recibir tu pedido?</h2>
@@ -441,22 +531,110 @@ function StepShipping({ zones, method, setMethod, zoneId, setZoneId, address, se
       </div>
 
       {method === "HOME_MVD" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          {/* Selector de zona */}
           <div>
-            <label style={labelStyle}>Zona</label>
+            <label style={labelStyle}>Zona de entrega</label>
             <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="admin-input">
               <option value="">Seleccioná una zona</option>
               {zones.map((z: ShippingZone) => (
-                <option key={z.id} value={z.id}>
-                  {z.name} — ${z.cost}
-                </option>
+                <option key={z.id} value={z.id}>{z.name} — ${z.cost}</option>
               ))}
             </select>
             <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
               <Info size={12} /> Si tu zona no aparece, usá envío por agencia o retiro.
             </p>
           </div>
-          <Field label="Dirección completa" value={address} onChange={setAddress} placeholder="Calle, número, apto" />
+
+          {/* Direcciones guardadas */}
+          {savedAddresses.length > 0 && (
+            <div>
+              <label style={labelStyle}>Direcciones guardadas</label>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {savedAddresses.map((addr: SavedAddress) => {
+                  const active = selectedSavedId === addr.id;
+                  return (
+                    <div
+                      key={addr.id}
+                      style={{
+                        display: "flex", alignItems: "center", gap: "0.75rem",
+                        padding: "0.85rem 1rem", borderRadius: "var(--radius-lg)", cursor: "pointer",
+                        background: active ? "rgba(255,42,133,0.08)" : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${active ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`,
+                        transition: "all 0.2s",
+                      }}
+                      onClick={() => onSelectSaved(active ? null : addr)}
+                    >
+                      <div style={{
+                        width: 36, height: 36, flexShrink: 0, borderRadius: "var(--radius-md)",
+                        background: active ? "rgba(255,42,133,0.15)" : "rgba(255,255,255,0.05)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: active ? "var(--accent-pink)" : "var(--text-secondary)",
+                      }}>
+                        {addr.isDefault ? <Star size={16} /> : <Home size={16} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {addr.label && <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>{addr.label}</p>}
+                        <p style={{ fontSize: "0.88rem", fontWeight: 500 }}>
+                          {addr.street} {addr.doorNumber}{addr.corner ? ` esq. ${addr.corner}` : ""}
+                        </p>
+                        <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                          {addr.neighborhood}{addr.postalCode ? ` · CP ${addr.postalCode}` : ""} · {addr.zoneName}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeleteSaved(addr.id); }}
+                        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", padding: 4, flexShrink: 0 }}
+                        title="Eliminar dirección"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  );
+                })}
+                <button
+                  onClick={() => onSelectSaved(null)}
+                  style={{
+                    padding: "0.7rem 1rem", borderRadius: "var(--radius-lg)", cursor: "pointer",
+                    background: selectedSavedId === null ? "rgba(255,42,133,0.08)" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${selectedSavedId === null ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.08)"}`,
+                    color: selectedSavedId === null ? "var(--accent-pink)" : "var(--text-secondary)",
+                    fontSize: "0.88rem", fontWeight: 600, textAlign: "left",
+                  }}
+                >
+                  + Ingresar nueva dirección
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Formulario de dirección (nueva o si no hay guardadas) */}
+          {selectedSavedId === null && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+                <Field label="Calle" value={addrForm.street} onChange={(v: string) => setAddrForm({ ...addrForm, street: v })} placeholder="Ej: Av. 18 de Julio" />
+                <Field label="Nro. puerta" value={addrForm.doorNumber} onChange={(v: string) => setAddrForm({ ...addrForm, doorNumber: v })} placeholder="Ej: 1234 apto 5" />
+              </div>
+              <Field label="Esquina (opcional)" value={addrForm.corner} onChange={(v: string) => setAddrForm({ ...addrForm, corner: v })} placeholder="Ej: Yaguarón" />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
+                <Field label="Barrio" value={addrForm.neighborhood} onChange={(v: string) => setAddrForm({ ...addrForm, neighborhood: v })} placeholder="Ej: Centro" />
+                <Field label="Código postal (opcional)" value={addrForm.postalCode} onChange={(v: string) => setAddrForm({ ...addrForm, postalCode: v })} placeholder="Ej: 11000" />
+              </div>
+
+              {/* Guardar dirección (solo si hay usuario logueado) */}
+              {user && (
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.88rem", color: "var(--text-secondary)" }}>
+                  <input
+                    type="checkbox"
+                    checked={saveAddress}
+                    onChange={(e) => setSaveAddress(e.target.checked)}
+                    style={{ accentColor: "var(--accent-pink)", width: 15, height: 15 }}
+                  />
+                  Guardar esta dirección para próximas compras
+                </label>
+              )}
+            </div>
+          )}
         </div>
       )}
 
