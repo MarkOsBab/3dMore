@@ -20,7 +20,8 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  category: string;
+  categoryId: string | null;
+  category: { id: string; name: string; slug: string } | null;
   isActive: boolean;
   isOffer: boolean;
   discountPct: number | null;
@@ -132,7 +133,7 @@ export default function ProductsClient({ initialProducts }: Props) {
                     border: "1px solid rgba(255,255,255,0.07)",
                   }}
                 >
-                  {p.category}
+                  {p.category?.name ?? "Sin categoría"}
                 </span>
                 {p.isOffer && (
                   <span

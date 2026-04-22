@@ -8,14 +8,14 @@ import { revalidatePath } from "next/cache";
 export async function getProducts() {
   return prisma.product.findMany({
     where: { isActive: true },
-    include: { variants: true },
+    include: { variants: true, category: { select: { id: true, name: true, slug: true } } },
     orderBy: { createdAt: "desc" },
   });
 }
 
 export async function getAllProductsAdmin() {
   return prisma.product.findMany({
-    include: { variants: true },
+    include: { variants: true, category: { select: { id: true, name: true, slug: true } } },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -23,7 +23,7 @@ export async function getAllProductsAdmin() {
 export async function getProductById(id: string) {
   return prisma.product.findUnique({
     where: { id },
-    include: { variants: true },
+    include: { variants: true, category: { select: { id: true, name: true, slug: true } } },
   });
 }
 
@@ -31,7 +31,7 @@ export async function createProduct(data: {
   name: string;
   description: string;
   price: number;
-  category: string;
+  categoryId?: string | null;
   thumbnail?: string;
   isOffer?: boolean;
   discountPct?: number;
@@ -48,7 +48,7 @@ export async function updateProduct(
     name?: string;
     description?: string;
     price?: number;
-    category?: string;
+    categoryId?: string | null;
     thumbnail?: string;
     isOffer?: boolean;
     discountPct?: number;

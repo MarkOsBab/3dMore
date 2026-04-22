@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createProduct, updateProduct } from "@/lib/actions";
 import { ImageUploader } from "./ImageUploader";
 import { X, Package, Tag, Sparkles, Image as ImageIcon } from "lucide-react";
@@ -10,10 +10,16 @@ interface InitialProduct {
   name: string;
   description: string;
   price: number;
-  category: string;
+  categoryId: string | null;
   isOffer: boolean;
   discountPct: number | null;
   thumbnail: string | null;
+}
+
+interface CategoryOption {
+  id: string;
+  name: string;
+  isActive: boolean;
 }
 
 interface Props {
@@ -22,20 +28,32 @@ interface Props {
   initialProduct?: InitialProduct;
 }
 
-const CATEGORIES = ["cuernos", "orejas", "moños", "accesorios"];
-
 export default function ProductForm({ onClose, onSaved, initialProduct }: Props) {
   const isEdit = !!initialProduct;
   const [loading, setLoading] = useState(false);
   const [thumbnail, setThumbnail] = useState(initialProduct?.thumbnail ?? "");
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [form, setForm] = useState({
     name: initialProduct?.name ?? "",
     description: initialProduct?.description ?? "",
     price: initialProduct?.price?.toString() ?? "",
-    category: initialProduct?.category ?? "cuernos",
+    categoryId: initialProduct?.categoryId ?? "",
     isOffer: initialProduct?.isOffer ?? false,
     discountPct: initialProduct?.discountPct?.toString() ?? "0",
   });
+
+  useEffect(() => {
+    fetch("/api/admin/categories")
+      .then((r) => r.json())
+      .then((data: CategoryOption[]) => {
+        const active = data.filter((c) => c.isActive);
+        setCategories(active);
+        if (!form.categoryId && active.length > 0) {
+          setForm((f) => ({ ...f, categoryId: active[0].id }));
+        }
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +64,7 @@ export default function ProductForm({ onClose, onSaved, initialProduct }: Props)
         name: form.name,
         description: form.description,
         price: parseFloat(form.price),
-        category: form.category,
+        categoryId: form.categoryId || null,
         thumbnail: thumbnail || undefined,
         isOffer: form.isOffer,
         discountPct: parseFloat(form.discountPct) || 0,
@@ -133,10 +151,13 @@ export default function ProductForm({ onClose, onSaved, initialProduct }: Props)
                 <Field label="Categoría">
                   <select
                     className="admin-input"
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    value={form.categoryId}
+                    onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
                   >
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value="">Sin categoría</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
                   </select>
                 </Field>
               </div>

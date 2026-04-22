@@ -1,5 +1,5 @@
 import { getProducts } from "@/lib/actions";
-import ProductCard from "@/components/ProductCard";
+import CatalogSection from "@/components/CatalogSection";
 import { ArrowRight } from "lucide-react";
 
 type Product = Awaited<ReturnType<typeof getProducts>>[number];
@@ -55,33 +55,7 @@ export default async function Home() {
       </section>
 
       {/* Catalog Section */}
-      <section id="products" style={{ padding: "6rem 0", backgroundColor: "rgba(0,0,0,0.3)" }}>
-        <div className="container">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "3rem" }}>
-            <div>
-              <h2 style={{ fontSize: "2.5rem", fontWeight: 700, marginBottom: "0.5rem" }}>
-                NUESTROS <span className="text-gradient">PRODUCTOS</span>
-              </h2>
-              <p style={{ color: "var(--text-secondary)" }}>Diseños únicos para destacar en cada viaje.</p>
-            </div>
-          </div>
-
-          {products.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "4rem", color: "var(--text-secondary)" }}>
-              <p style={{ fontSize: "1.2rem" }}>🚧 Cargando productos desde la base de datos...</p>
-              <p style={{ marginTop: "1rem", fontSize: "0.9rem" }}>Si ves esto, la BD no está conectada aún. Agrega productos desde <a href="/admin/products" style={{ color: "var(--accent-pink)" }}>/admin</a>.</p>
-            </div>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "2rem" }}>
-              {products.map((product: Product, index: number) => (
-                <div key={product.id} style={{ animationDelay: `${0.1 * index}s` }} className="animate-fade-in-up">
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+      <CatalogSection products={products} />
     </main>
   );
 }

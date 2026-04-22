@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Productos", icon: Package },
+  { href: "/admin/categories", label: "Categorías", icon: Layers },
   { href: "/admin/promos", label: "Promociones", icon: Tag },
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingBag },
   { href: "/admin/shipping", label: "Envíos", icon: Truck },
@@ -14,6 +15,12 @@ const NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch("/api/admin/auth", { method: "DELETE" });
+    router.push("/admin/login");
+  };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--bg-dark)" }}>
@@ -112,9 +119,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <ShieldCheck size={14} color="var(--success)" style={{ flexShrink: 0 }} />
             <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
-              Sesión protegida con Basic Auth
+              Sesión activa
             </p>
           </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              display: "flex", alignItems: "center", gap: "0.5rem",
+              padding: "0.6rem 1rem", width: "100%",
+              borderRadius: "var(--radius-md)",
+              fontSize: "0.85rem", color: "var(--danger)",
+              background: "rgba(239,68,68,0.06)",
+              border: "1px solid rgba(239,68,68,0.15)",
+              cursor: "pointer", marginBottom: "0.5rem",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.12)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.06)")}
+          >
+            <LogOut size={14} /> Cerrar sesión
+          </button>
           <a
             href="/"
             target="_blank"

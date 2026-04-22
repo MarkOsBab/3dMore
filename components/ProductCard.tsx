@@ -10,7 +10,8 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  category: string;
+  categoryId: string | null;
+  category: { id: string; name: string; slug: string } | null;
   thumbnail: string | null;
   isOffer: boolean;
   discountPct: number | null;
@@ -27,7 +28,7 @@ export default function ProductCard({ product }: { product: Product }) {
     description: product.description,
     price: product.price,
     imageUrl: product.thumbnail ?? "",
-    category: product.category,
+    category: product.category?.name ?? "",
     isOffer: product.isOffer,
     discountPercentage: product.discountPct ?? undefined,
   };
@@ -132,6 +133,19 @@ export default function ProductCard({ product }: { product: Product }) {
           <h3 style={{ fontSize: "1.1rem", fontWeight: 600 }}>
             <Link href={`/products/${product.id}`}>{product.name}</Link>
           </h3>
+          {product.category && (
+            <span style={{
+              fontSize: "0.68rem", padding: "2px 8px",
+              borderRadius: "var(--radius-pill)",
+              background: "rgba(59,130,246,0.1)",
+              color: "var(--accent-blue)",
+              border: "1px solid rgba(59,130,246,0.2)",
+              fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase",
+              display: "inline-block", marginTop: 4,
+            }}>
+              {product.category.name}
+            </span>
+          )}
           <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "0.5rem" }}>
             {discounted !== null ? (
               <>
