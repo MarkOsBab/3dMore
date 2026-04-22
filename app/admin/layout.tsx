@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { ConfirmProvider } from "@/components/admin/ConfirmDialog";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -22,12 +23,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
+
   const handleLogout = async () => {
     await fetch("/api/admin/auth", { method: "DELETE" });
     router.push("/admin/login");
   };
 
   return (
+    <ConfirmProvider>
     <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "var(--bg-dark)" }}>
       {/* Sidebar */}
       <aside
@@ -190,6 +193,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </main>
     </div>
+    </ConfirmProvider>
   );
 }
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createVariant, deleteVariant } from "@/lib/actions";
 import { ImageUploader } from "./ImageUploader";
 import { Trash2, Plus, Layers, X, Palette, Sparkles } from "lucide-react";
+import { useConfirm, useAlert } from "@/components/admin/ConfirmDialog";
 
 interface Variant {
   id: string;
@@ -24,6 +25,8 @@ interface Props {
 }
 
 export default function VariantForm({ productId, productName, productPrice, variants, onClose, onSaved }: Props) {
+  const confirm = useConfirm();
+  const alert = useAlert();
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState("");
@@ -43,8 +46,8 @@ export default function VariantForm({ productId, productName, productPrice, vari
   };
 
   const handleAdd = async () => {
-    if (!colorName.trim()) return alert("Ingresá el nombre del color");
-    if (!imageUrl) return alert("Subí una imagen para la variante");
+    if (!colorName.trim()) { await alert("Ingresá el nombre del color"); return; }
+    if (!imageUrl) { await alert("Subí una imagen para la variante"); return; }
     setLoading(true);
     try {
       await createVariant({
@@ -63,7 +66,7 @@ export default function VariantForm({ productId, productName, productPrice, vari
   };
 
   const handleDelete = async (variantId: string) => {
-    if (!confirm("¿Eliminar esta variante?")) return;
+    if (!await confirm({ message: "¿Seguro que querés eliminar esta variante?", title: "Eliminar variante" })) return;
     setDeletingId(variantId);
     try {
       await deleteVariant(variantId, productId);

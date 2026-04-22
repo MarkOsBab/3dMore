@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createPromoCode, togglePromoCode, deletePromoCode } from "@/lib/actions";
 import { Plus, Trash2, Copy, Check, Tag } from "lucide-react";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 
 interface PromoCode {
   id: string;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function PromosClient({ initialPromos }: Props) {
+  const confirm = useConfirm();
   const [promos, setPromos] = useState<PromoCode[]>(initialPromos);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,7 +53,7 @@ export default function PromosClient({ initialPromos }: Props) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este código?")) return;
+    if (!await confirm({ message: "¿Seguro que querés eliminar este código promocional?", title: "Eliminar código" })) return;
     await deletePromoCode(id);
     setPromos((p) => p.filter((x) => x.id !== id));
   };

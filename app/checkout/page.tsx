@@ -142,16 +142,17 @@ export default function CheckoutPage() {
   };
 
   const payWithWhatsApp = () => {
-    // String.fromCodePoint garantiza emojis correctos sin problemas de encoding en el source
+    // Los emojis se construyen desde sus bytes UTF-8 en ASCII puro para evitar
+    // cualquier corrupcion de encoding durante el bundling de webpack/Next.js
     const E = {
-      tag:    String.fromCodePoint(0x1F3F7), // 🏷
-      money:  String.fromCodePoint(0x1F4B0), // 💰
-      house:  String.fromCodePoint(0x1F3E0), // 🏠
-      box:    String.fromCodePoint(0x1F4E6), // 📦
-      store:  String.fromCodePoint(0x1F3EA), // 🏪
-      memo:   String.fromCodePoint(0x1F4DD), // 📝
-      person: String.fromCodePoint(0x1F464), // 👤
-      mobile: String.fromCodePoint(0x1F4F1), // 📱
+      tag:    decodeURIComponent('%F0%9F%8F%B7'), // 🏷
+      money:  decodeURIComponent('%F0%9F%92%B0'), // 💰
+      house:  decodeURIComponent('%F0%9F%8F%A0'), // 🏠
+      box:    decodeURIComponent('%F0%9F%93%A6'), // 📦
+      store:  decodeURIComponent('%F0%9F%8F%AA'), // 🏪
+      memo:   decodeURIComponent('%F0%9F%93%9D'), // 📝
+      person: decodeURIComponent('%F0%9F%91%A4'), // 👤
+      mobile: decodeURIComponent('%F0%9F%93%B1'), // 📱
     };
 
     const orderText = items

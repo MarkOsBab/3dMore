@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { Trash2, Plus, Layers, Package, Pencil } from "lucide-react";
 import { deleteProduct, updateProduct } from "@/lib/actions";
+import { useConfirm } from "@/components/admin/ConfirmDialog";
 import ProductForm from "@/components/admin/ProductForm";
 import VariantForm from "@/components/admin/VariantForm";
 
@@ -32,6 +33,7 @@ interface Product {
 interface Props { initialProducts: Product[] }
 
 export default function ProductsClient({ initialProducts }: Props) {
+  const confirm = useConfirm();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<Product | null>(null);
@@ -46,7 +48,7 @@ export default function ProductsClient({ initialProducts }: Props) {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este producto?")) return;
+    if (!await confirm({ message: "¿Seguro que querés eliminar este producto? Esta acción no se puede deshacer.", title: "Eliminar producto" })) return;
     setDeleting(id);
     await deleteProduct(id);
     setProducts((p) => p.filter((x) => x.id !== id));

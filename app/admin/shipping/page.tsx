@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Truck, Plus, Trash2, Save, X, Power } from "lucide-react";
+import { useConfirm, useAlert } from "@/components/admin/ConfirmDialog";
 
 interface Zone {
   id: string;
@@ -12,6 +13,8 @@ interface Zone {
 }
 
 export default function AdminShippingPage() {
+  const confirm = useConfirm();
+  const alert = useAlert();
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -44,7 +47,7 @@ export default function AdminShippingPage() {
       load();
     } else {
       const err = await r.json();
-      alert(err.error ?? "Error al crear");
+      await alert(err.error ?? "Error al crear");
     }
   };
 
@@ -80,7 +83,7 @@ export default function AdminShippingPage() {
   };
 
   const remove = async (z: Zone) => {
-    if (!confirm(`¿Eliminar la zona "${z.name}"?`)) return;
+    if (!await confirm({ message: `¿Seguro que querés eliminar la zona "${z.name}"?`, title: "Eliminar zona" })) return;
     await fetch(`/api/shipping/zones/${z.id}`, { method: "DELETE" });
     load();
   };
