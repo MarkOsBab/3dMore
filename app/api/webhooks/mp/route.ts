@@ -6,27 +6,50 @@ export const maxDuration = 60;
 
 /**
  * Mercado Pago webhook.
- * Procesa de forma síncrona. MP tolera hasta 22s, Vercel hasta maxDuration.
+ * Procesa de forma síncrona. MP tolera hasta 22s.
  */
 export async function POST(req: Request) {
+  const started = Date.now();
+  const url = new URL(req.url);
+  console.log(`[MP Webhook] ▶ POST ${url.pathname}${url.search} | ua="${req.headers.get("user-agent") ?? "-"}" | x-request-id="${req.headers.get("x-request-id") ?? "-"}"`);
+
   let paymentId: string | undefined;
 
+  // 1. Intentar leer del body
   try {
     const body = await req.json();
     if (body?.type === "payment" && body?.data?.id) {
       paymentId = String(body.data.id);
     }
   } catch {
-    // body inválido
-    return NextResponse.json({ received: true });
+    // body vacío o inválido — MP a veces envía query params en vez de body
+  }
+
+  // 2. Fallback: leer de query params (formato ?type=payment&data.id=XXX)
+  if (!paymentId) {
+    const qType = url.searchParams.get("type") || url.searchParams.get("topic");
+    const qId = url.searchParams.get("data.id") || url.searchParams.get("id");
+    if (qType === "payment" && qId) {
+      paymentId = qId;
+    }
   }
 
   if (!paymentId) {
+    console.log(`[MP Webhook] ⚠ sin paymentId (body+query vacío) | ${Date.now() - started}ms`);
     return NextResponse.json({ received: true });
   }
 
+  console.log(`[MP Webhook] ⚙ procesando paymentId=${paymentId}`);
   await processPayment(paymentId);
+  console.log(`[MP Webhook] ✓ respondido 200 en ${Date.now() - started}ms`);
   return NextResponse.json({ received: true });
+}
+
+// MP a veces hace GET primero para validar la URL — responder 200 siempre
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  console.log(`[MP Webhook] GET ${url.pathname}${url.search} (health check)`);
+  return NextResponse.json({ ok: true });
 }
 
 async function processPayment(paymentId: string): Promise<void> {
