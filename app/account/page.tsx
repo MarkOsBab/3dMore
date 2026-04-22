@@ -192,17 +192,29 @@ export default function AccountPage() {
 
         {/* Pedidos */}
         <section className="glass" style={{ marginTop: "1.5rem", padding: "1.5rem", borderRadius: "var(--radius-xl)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem", display: "flex", alignItems: "center", gap: 8 }}>
-            <Package size={16} color="var(--accent-pink)" /> Mis pedidos
-          </h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <h2 style={{ fontSize: "1.1rem", fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+              <Package size={16} color="var(--accent-pink)" /> Mis pedidos
+            </h2>
+            {orders.length > 0 && (
+              <Link href="/account/orders" style={{ fontSize: "0.82rem", color: "var(--accent-blue)", fontWeight: 600 }}>
+                Ver todos →
+              </Link>
+            )}
+          </div>
 
           {orders.length === 0 ? (
             <p style={{ fontSize: "0.88rem", color: "var(--text-secondary)" }}>Aún no realizaste ningún pedido.</p>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {orders.map((o) => (
+              {orders.slice(0, 3).map((o) => (
                 <OrderCard key={o.id} order={o} />
               ))}
+              {orders.length > 3 && (
+                <Link href="/account/orders" style={{ textAlign: "center", padding: "0.6rem", display: "block", fontSize: "0.85rem", color: "var(--accent-blue)", fontWeight: 600, borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 4 }}>
+                  Ver los {orders.length - 3} pedidos restantes →
+                </Link>
+              )}
             </div>
           )}
         </section>
