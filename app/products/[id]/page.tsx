@@ -1,4 +1,5 @@
 import { getProductById } from "@/lib/actions";
+import { prisma } from "@/lib/prisma";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import ProductInteractive from "./ProductInteractive";
@@ -67,6 +68,18 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
+  // Build a color hex lookup + active palette for the 3D viewer / selector
+  const colorHexById: Record<string, string> = {};
+  let palette: { id: string; name: string; hex: string }[] = [];
+  if (product.parts && product.parts.length > 0) {
+    const colors = await prisma.color.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, hex: true, isActive: true },
+    });
+    for (const c of colors) colorHexById[c.id] = c.hex;
+    palette = colors.filter((c) => c.isActive).map(({ id, name, hex }) => ({ id, name, hex }));
+  }
+
   const effectivePrice = product.isOffer && product.discountPct
     ? Math.round(product.price * (1 - product.discountPct / 100) * 100) / 100
     : product.price;
@@ -129,7 +142,7 @@ export default async function ProductPage({
           alignItems: "start",
         }}
       >
-        <ProductInteractive product={product as any} />
+        <ProductInteractive product={{ ...(product as any), colorHexById, palette }} />
       </div>
     </main>
   );

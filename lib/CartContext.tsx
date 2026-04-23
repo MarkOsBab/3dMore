@@ -20,6 +20,8 @@ export interface CartProduct {
   variantColorName?: string;
   isOffer?: boolean;
   discountPercentage?: number;
+  /** Per-part color selection (3D configurable products): { partName: colorName } */
+  customColors?: Record<string, string>;
 }
 
 interface CartItem extends CartProduct {

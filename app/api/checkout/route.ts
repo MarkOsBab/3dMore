@@ -19,6 +19,8 @@ interface CheckoutBody {
     price: number;
     isOffer?: boolean;
     discountPercentage?: number;
+    variantColorName?: string;
+    customColors?: Record<string, string>;
   }>;
   promoCode?: string | null;
   promoDiscount?: number;
@@ -73,9 +75,17 @@ export async function POST(req: Request) {
         item.isOffer && item.discountPercentage
           ? Math.round(item.price * (1 - item.discountPercentage / 100) * 100) / 100
           : item.price;
+
+      // Build a title that shows chosen colors so the operator sees them in MP
+      const customDetail = item.customColors && Object.keys(item.customColors).length > 0
+        ? ` (${Object.entries(item.customColors).map(([p, c]) => `${p}: ${c}`).join(", ")})`
+        : item.variantColorName
+          ? ` — ${item.variantColorName}`
+          : "";
+
       return {
         id: String(idx),
-        title: item.name,
+        title: `${item.name}${customDetail}`.slice(0, 254),
         description: item.description || "Accesorio impreso en 3D — 3DMORE",
         picture_url: item.imageUrl,
         category_id: item.category || "fashion",

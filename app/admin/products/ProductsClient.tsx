@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Trash2, Plus, Layers, Package, Pencil, Search, Star } from "lucide-react";
+import { Trash2, Plus, Layers, Package, Pencil, Search, Star, Box } from "lucide-react";
 import { deleteProduct, updateProduct } from "@/lib/actions";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import ProductForm from "@/components/admin/ProductForm";
 import VariantForm from "@/components/admin/VariantForm";
+import PartsForm from "@/components/admin/PartsForm";
 import Pagination from "@/components/admin/Pagination";
 
 const PAGE_SIZE = 10;
@@ -32,6 +33,12 @@ interface Product {
   discountPct: number | null;
   thumbnail: string | null;
   variants: Variant[];
+  viewerYaw?: number;
+  viewerPitch?: number;
+  viewerZoom?: number;
+  viewerTargetX?: number;
+  viewerTargetY?: number;
+  viewerTargetZ?: number;
 }
 
 interface Props { initialProducts: Product[] }
@@ -42,6 +49,7 @@ export default function ProductsClient({ initialProducts }: Props) {
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<Product | null>(null);
   const [variantTarget, setVariantTarget] = useState<Product | null>(null);
+  const [partsTarget, setPartsTarget] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [exiting, setExiting] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -310,6 +318,13 @@ export default function ProductsClient({ initialProducts }: Props) {
                 <Layers size={16} />
               </button>
               <button
+                title="Gestionar partes 3D"
+                onClick={() => setPartsTarget(p)}
+                className="admin-icon-btn"
+              >
+                <Box size={16} />
+              </button>
+              <button
                 title="Eliminar producto"
                 disabled={!!deleting}
                 onClick={() => handleDelete(p.id)}
@@ -342,6 +357,20 @@ export default function ProductsClient({ initialProducts }: Props) {
           productPrice={variantTarget.price}
           variants={variantTarget.variants}
           onClose={() => setVariantTarget(null)}
+          onSaved={refresh}
+        />
+      )}
+      {partsTarget && (
+        <PartsForm
+          productId={partsTarget.id}
+          productName={partsTarget.name}
+          initialYaw={partsTarget.viewerYaw ?? 0}
+          initialPitch={partsTarget.viewerPitch ?? 0}
+          initialZoom={partsTarget.viewerZoom ?? 3}
+          initialTargetX={partsTarget.viewerTargetX ?? 0}
+          initialTargetY={partsTarget.viewerTargetY ?? 0}
+          initialTargetZ={partsTarget.viewerTargetZ ?? 0}
+          onClose={() => setPartsTarget(null)}
           onSaved={refresh}
         />
       )}

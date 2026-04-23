@@ -96,7 +96,14 @@ export async function getAllProductsAdmin() {
 export async function getProductById(id: string) {
   return prisma.product.findUnique({
     where: { id },
-    include: { variants: true, category: { select: { id: true, name: true, slug: true } } },
+    include: {
+      variants: true,
+      category: { select: { id: true, name: true, slug: true } },
+      parts: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        include: { defaultColor: true },
+      },
+    },
   });
 }
 
@@ -127,6 +134,12 @@ export async function updateProduct(
     discountPct?: number;
     isActive?: boolean;
     isFeatured?: boolean;
+    viewerYaw?: number;
+    viewerPitch?: number;
+    viewerZoom?: number;
+    viewerTargetX?: number;
+    viewerTargetY?: number;
+    viewerTargetZ?: number;
   }
 ) {
   const product = await prisma.product.update({ where: { id }, data });
@@ -151,8 +164,19 @@ export async function createVariant(data: {
   price?: number | null;
   isOffer?: boolean;
   discountPct?: number;
+  partColors?: Record<string, string> | null;
 }) {
-  const variant = await prisma.productVariant.create({ data });
+  const variant = await prisma.productVariant.create({
+    data: {
+      productId:   data.productId,
+      colorName:   data.colorName,
+      imageUrl:    data.imageUrl,
+      price:       data.price,
+      isOffer:     data.isOffer,
+      discountPct: data.discountPct,
+      partColors:  data.partColors ?? undefined,
+    },
+  });
   revalidatePath(`/products/${data.productId}`);
   revalidatePath("/admin/products");
   return variant;
@@ -173,9 +197,20 @@ export async function updateVariant(
     price?: number | null;
     isOffer?: boolean;
     discountPct?: number;
+    partColors?: Record<string, string> | null;
   }
 ) {
-  const variant = await prisma.productVariant.update({ where: { id }, data });
+  const variant = await prisma.productVariant.update({
+    where: { id },
+    data: {
+      ...(data.colorName   !== undefined ? { colorName:   data.colorName }   : {}),
+      ...(data.imageUrl    !== undefined ? { imageUrl:    data.imageUrl }    : {}),
+      ...(data.price       !== undefined ? { price:       data.price }       : {}),
+      ...(data.isOffer     !== undefined ? { isOffer:     data.isOffer }     : {}),
+      ...(data.discountPct !== undefined ? { discountPct: data.discountPct } : {}),
+      ...(data.partColors  !== undefined ? { partColors:  data.partColors ?? undefined } : {}),
+    },
+  });
   revalidatePath(`/products/${productId}`);
   revalidatePath("/admin/products");
   return variant;
@@ -230,4 +265,140 @@ export async function validatePromoCode(
   }
 
   return { valid: true, discountPct: promo.discountPct };
+}
+
+// ─── COLORS (paleta global autogestionable) ───────────────────────────────────
+
+export async function getColors() {
+  return prisma.color.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+}
+
+export async function getActiveColors() {
+  return prisma.color.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+}
+
+export async function createColor(data: { name: string; hex: string; isActive?: boolean; sortOrder?: number }) {
+  const color = await prisma.color.create({
+    data: {
+      name: data.name.trim(),
+      hex:  data.hex.trim().toLowerCase(),
+      isActive:  data.isActive  ?? true,
+      sortOrder: data.sortOrder ?? 0,
+    },
+  });
+  revalidatePath("/admin/colors");
+  return color;
+}
+
+export async function updateColor(id: string, data: { name?: string; hex?: string; isActive?: boolean; sortOrder?: number }) {
+  const color = await prisma.color.update({
+    where: { id },
+    data: {
+      ...(data.name      !== undefined ? { name: data.name.trim() } : {}),
+      ...(data.hex       !== undefined ? { hex:  data.hex.trim().toLowerCase() } : {}),
+      ...(data.isActive  !== undefined ? { isActive:  data.isActive }  : {}),
+      ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
+    },
+  });
+  revalidatePath("/admin/colors");
+  return color;
+}
+
+export async function toggleColor(id: string) {
+  const curr = await prisma.color.findUniqueOrThrow({ where: { id } });
+  const color = await prisma.color.update({ where: { id }, data: { isActive: !curr.isActive } });
+  revalidatePath("/admin/colors");
+  return color;
+}
+
+export async function deleteColor(id: string) {
+  await prisma.color.delete({ where: { id } });
+  revalidatePath("/admin/colors");
+}
+
+export async function reorderColors(ids: string[]) {
+  await prisma.$transaction(
+    ids.map((id, idx) => prisma.color.update({ where: { id }, data: { sortOrder: idx } })),
+  );
+  revalidatePath("/admin/colors");
+}
+
+// ─── PRODUCT PARTS (modelos 3D por producto) ──────────────────────────────────
+
+export async function getProductParts(productId: string) {
+  return prisma.productPart.findMany({
+    where: { productId },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    include: { defaultColor: true },
+  });
+}
+
+type PartInput = {
+  name: string;
+  modelUrl: string;
+  format: string;
+  positionX?: number; positionY?: number; positionZ?: number;
+  rotationX?: number; rotationY?: number; rotationZ?: number;
+  scale?: number;
+  defaultColorId?: string | null;
+  sortOrder?: number;
+};
+
+export async function createProductPart(productId: string, data: PartInput) {
+  const part = await prisma.productPart.create({
+    data: {
+      productId,
+      name:     data.name.trim(),
+      modelUrl: data.modelUrl,
+      format:   data.format,
+      positionX: data.positionX ?? 0,
+      positionY: data.positionY ?? 0,
+      positionZ: data.positionZ ?? 0,
+      rotationX: data.rotationX ?? 0,
+      rotationY: data.rotationY ?? 0,
+      rotationZ: data.rotationZ ?? 0,
+      scale:          data.scale          ?? 1,
+      defaultColorId: data.defaultColorId ?? null,
+      sortOrder:      data.sortOrder      ?? 0,
+    },
+  });
+  revalidatePath(`/admin/products`);
+  return part;
+}
+
+export async function updateProductPart(id: string, data: Partial<PartInput>) {
+  const part = await prisma.productPart.update({
+    where: { id },
+    data: {
+      ...(data.name           !== undefined ? { name: data.name.trim() } : {}),
+      ...(data.modelUrl       !== undefined ? { modelUrl: data.modelUrl } : {}),
+      ...(data.format         !== undefined ? { format:   data.format }   : {}),
+      ...(data.positionX      !== undefined ? { positionX: data.positionX } : {}),
+      ...(data.positionY      !== undefined ? { positionY: data.positionY } : {}),
+      ...(data.positionZ      !== undefined ? { positionZ: data.positionZ } : {}),
+      ...(data.rotationX      !== undefined ? { rotationX: data.rotationX } : {}),
+      ...(data.rotationY      !== undefined ? { rotationY: data.rotationY } : {}),
+      ...(data.rotationZ      !== undefined ? { rotationZ: data.rotationZ } : {}),
+      ...(data.scale          !== undefined ? { scale: data.scale } : {}),
+      ...(data.defaultColorId !== undefined ? { defaultColorId: data.defaultColorId } : {}),
+      ...(data.sortOrder      !== undefined ? { sortOrder: data.sortOrder } : {}),
+    },
+  });
+  revalidatePath(`/admin/products`);
+  return part;
+}
+
+export async function deleteProductPart(id: string) {
+  await prisma.productPart.delete({ where: { id } });
+  revalidatePath(`/admin/products`);
+}
+
+export async function reorderProductParts(ids: string[]) {
+  await prisma.$transaction(
+    ids.map((id, idx) => prisma.productPart.update({ where: { id }, data: { sortOrder: idx } })),
+  );
+  revalidatePath(`/admin/products`);
 }
