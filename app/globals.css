@@ -651,6 +651,29 @@ button:active:not(:disabled) { transform: scale(0.97); }
 }
 
 /* =========================================================================
+   Catalog page layout
+   ========================================================================= */
+.catalog-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Sidebar filter panels: desktop = always visible, stacked */
+.catalog-filters-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 0;
+}
+
+/* Mobile toggle: hidden on desktop */
+.catalog-filters-toggle {
+  display: none;
+}
+
+/* =========================================================================
    Mobile Responsiveness — Global media queries
    ========================================================================= */
 
@@ -706,6 +729,43 @@ button:active:not(:disabled) { transform: scale(0.97); }
   /* ── Checkout 2-col layout (form + summary) → stacked ─────────────── */
   .checkout-layout {
     grid-template-columns: 1fr !important;
+  }
+
+  /* ── Catálogo: sidebar va arriba del grid en móvil ─────────────────── */
+  .catalog-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .catalog-layout > aside {
+    position: static !important;
+  }
+
+  /* Toggle visible en mobile, panels colapsados */
+  .catalog-filters-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.7rem 1rem;
+    background: var(--bg-card);
+    border: var(--hairline);
+    border-radius: var(--radius-lg);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .catalog-filters-toggle:hover {
+    color: var(--text-primary);
+    border-color: rgba(255,255,255,0.15);
+  }
+  .catalog-filters-content {
+    display: none;
+    margin-top: 0.75rem;
+  }
+  .catalog-filters-content.is-open {
+    display: flex;
+    animation: admin-slide-down 0.22s ease both;
   }
 
   /* ── Hero: hide product image column on small screens ─────────────── */

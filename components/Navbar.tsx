@@ -118,8 +118,11 @@ export default function Navbar() {
 
           {/* Desktop nav links — hidden on mobile via CSS */}
           <div className="nav-desktop-links" style={{ gap: "1.5rem", alignItems: "center" }}>
-            <Link href="/#products" style={{ fontWeight: 500, transition: "color 0.2s" }}>
+            <Link href="/catalogo" style={{ fontWeight: 500, transition: "color 0.2s" }}>
               Catálogo
+            </Link>
+            <Link href="/#featured" style={{ fontWeight: 500, transition: "color 0.2s" }}>
+              Destacados
             </Link>
 
             {!loading && (
@@ -243,7 +246,7 @@ export default function Navbar() {
           }}
         >
           <Link
-            href="/#products"
+            href="/catalogo"
             onClick={() => setMobileOpen(false)}
             style={{
               padding: "0.85rem 0.5rem",
@@ -254,6 +257,19 @@ export default function Navbar() {
             }}
           >
             Catálogo
+          </Link>
+          <Link
+            href="/#featured"
+            onClick={() => setMobileOpen(false)}
+            style={{
+              padding: "0.85rem 0.5rem",
+              fontWeight: 500,
+              fontSize: "1rem",
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              display: "block",
+            }}
+          >
+            Destacados
           </Link>
 
           {!loading && user ? (

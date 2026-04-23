@@ -7,9 +7,82 @@ import { revalidatePath } from "next/cache";
 
 export async function getProducts() {
   return prisma.product.findMany({
-    where: { isActive: true },
-    include: { variants: true, category: { select: { id: true, name: true, slug: true } } },
+    where: {
+      isActive: true,
+      OR: [
+        { categoryId: null },
+        { category: { isActive: true } },
+      ],
+    },
+    include: { variants: true, category: { select: { id: true, name: true, slug: true, sortOrder: true } } },
     orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getFeaturedProducts() {
+  return prisma.product.findMany({
+    where: {
+      isActive: true,
+      isFeatured: true,
+      OR: [
+        { categoryId: null },
+        { category: { isActive: true } },
+      ],
+    },
+    include: { variants: true, category: { select: { id: true, name: true, slug: true, sortOrder: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function getActiveCategories() {
+  return prisma.category.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, slug: true, sortOrder: true },
+    orderBy: { sortOrder: "asc" },
+  });
+}
+
+export async function getFilteredProducts(params: {
+  category?: string;
+  search?: string;
+  sort?: string;
+}) {
+  const { category, search, sort } = params;
+
+  const orderBy =
+    sort === "price_asc"  ? ({ price: "asc" }      as const) :
+    sort === "price_desc" ? ({ price: "desc" }     as const) :
+    sort === "oldest"     ? ({ createdAt: "asc" }  as const) :
+                            ({ createdAt: "desc" } as const);
+
+  return prisma.product.findMany({
+    where: {
+      isActive: true,
+      AND: [
+        {
+          OR: [
+            { categoryId: null },
+            { category: { isActive: true } },
+          ],
+        },
+        ...(category ? [{ category: { slug: category } }] : []),
+        ...(search
+          ? [
+              {
+                OR: [
+                  { name: { contains: search, mode: "insensitive" as const } },
+                  { description: { contains: search, mode: "insensitive" as const } },
+                ],
+              },
+            ]
+          : []),
+      ],
+    },
+    include: {
+      variants: true,
+      category: { select: { id: true, name: true, slug: true, sortOrder: true } },
+    },
+    orderBy,
   });
 }
 
@@ -53,6 +126,7 @@ export async function updateProduct(
     isOffer?: boolean;
     discountPct?: number;
     isActive?: boolean;
+    isFeatured?: boolean;
   }
 ) {
   const product = await prisma.product.update({ where: { id }, data });

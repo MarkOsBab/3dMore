@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Package } from "lucide-react";
 
 interface Variant {
   id: string;
@@ -48,10 +49,9 @@ export default function VariantSelector({ thumbnail, variants, productName }: Pr
               alignItems: "center",
               justifyContent: "center",
               color: "var(--text-secondary)",
-              fontSize: "4rem",
             }}
           >
-            🪖
+            <Package size={80} strokeWidth={1.2} />
           </div>
         )}
       </div>

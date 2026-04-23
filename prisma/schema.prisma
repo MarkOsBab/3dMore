@@ -26,6 +26,7 @@ model Product {
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   isActive    Boolean   @default(true)
+  isFeatured  Boolean   @default(false)
   isOffer     Boolean   @default(false)
   discountPct Float?    @default(0)
   thumbnail   String?

@@ -49,7 +49,7 @@ export default function SuccessPage() {
         </div>
 
         <h1 style={{ fontSize: "1.75rem", fontWeight: 800, marginBottom: "0.6rem" }}>
-          ¡Pago exitoso! 🎉
+          ¡Pago exitoso!
         </h1>
         <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.6, marginBottom: "2rem" }}>
           Tu pedido fue recibido y está siendo procesado. Te contactaremos pronto con los detalles del envío.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Trash2, Plus, Layers, Package, Pencil, Search } from "lucide-react";
+import { Trash2, Plus, Layers, Package, Pencil, Search, Star } from "lucide-react";
 import { deleteProduct, updateProduct } from "@/lib/actions";
 import { useConfirm } from "@/components/admin/ConfirmDialog";
 import ProductForm from "@/components/admin/ProductForm";
@@ -27,6 +27,7 @@ interface Product {
   categoryId: string | null;
   category: { id: string; name: string; slug: string } | null;
   isActive: boolean;
+  isFeatured: boolean;
   isOffer: boolean;
   discountPct: number | null;
   thumbnail: string | null;
@@ -84,6 +85,11 @@ export default function ProductsClient({ initialProducts }: Props) {
   const handleToggleActive = async (p: Product) => {
     await updateProduct(p.id, { isActive: !p.isActive });
     setProducts((prev) => prev.map((x) => x.id === p.id ? { ...x, isActive: !x.isActive } : x));
+  };
+
+  const handleToggleFeatured = async (p: Product) => {
+    await updateProduct(p.id, { isFeatured: !p.isFeatured });
+    setProducts((prev) => prev.map((x) => x.id === p.id ? { ...x, isFeatured: !x.isFeatured } : x));
   };
 
   return (
@@ -239,6 +245,26 @@ export default function ProductsClient({ initialProducts }: Props) {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexShrink: 0 }}>
+              {/* Toggle destacado */}
+              <button
+                onClick={() => handleToggleFeatured(p)}
+                title={p.isFeatured ? "Quitar destacado" : "Marcar como destacado"}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "0.3rem",
+                  color: p.isFeatured ? "#f59e0b" : "var(--text-muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  transition: "color 0.2s, transform 0.2s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.2)")}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+              >
+                <Star size={16} fill={p.isFeatured ? "currentColor" : "none"} />
+              </button>
+
               {/* Toggle activo */}
               <label
                 style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}

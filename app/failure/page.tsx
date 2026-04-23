@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { XCircle, ArrowLeft, RefreshCcw } from "lucide-react";
+import { XCircle, ArrowLeft, RefreshCcw, MessageCircle } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -89,7 +89,7 @@ export default function FailurePage() {
               textDecoration: "none", color: "var(--text-secondary)", fontSize: "0.88rem",
             }}
           >
-            💬 Pagar por WhatsApp
+            <MessageCircle size={16} /> Pagar por WhatsApp
           </a>
           <Link
             href="/"

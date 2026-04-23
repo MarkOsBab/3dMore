@@ -99,7 +99,7 @@ export async function sendOrderConfirmedBuyer(order: OrderData) {
         <!-- Body -->
         <tr>
           <td style="padding:32px">
-            <p style="margin:0 0 8px;font-size:24px">✅ Pago confirmado</p>
+            <p style="margin:0 0 8px;font-size:24px">&#10003; Pago confirmado</p>
             <p style="margin:0 0 24px;color:#6b7280">Hola <strong>${firstName}</strong>, tu pago fue aprobado exitosamente.</p>
 
             <!-- Order badge -->
@@ -157,7 +157,7 @@ export async function sendOrderConfirmedBuyer(order: OrderData) {
   await getResend().emails.send({
     from: FROM,
     to: email,
-    subject: `✅ Pago confirmado — Pedido #${shortId} | 3DMORE`,
+    subject: `Pago confirmado — Pedido #${shortId} | 3DMORE`,
     html,
   });
 }
@@ -209,7 +209,7 @@ export async function sendOrderConfirmedAdmin(order: OrderData) {
         <!-- Body -->
         <tr>
           <td style="padding:32px">
-            <p style="margin:0 0 24px;font-size:22px">💰 Nuevo pago confirmado</p>
+            <p style="margin:0 0 24px;font-size:22px">Nuevo pago confirmado</p>
 
             <!-- Order + buyer info -->
             <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px">
@@ -281,7 +281,7 @@ export async function sendOrderConfirmedAdmin(order: OrderData) {
   await getResend().emails.send({
     from: FROM,
     to: adminEmail,
-    subject: `💰 Nuevo pedido #${shortId} — $${order.total.toFixed(2)} UYU | 3DMORE`,
+    subject: `Nuevo pedido #${shortId} — $${order.total.toFixed(2)} UYU | 3DMORE`,
     html,
   });
 }

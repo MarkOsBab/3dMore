@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useCart } from "@/lib/CartContext";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Package, CheckCircle, Truck, Zap } from "lucide-react";
 
 interface Variant {
   id: string;
@@ -70,8 +70,8 @@ export default function ProductInteractive({ product }: { product: Product }) {
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)", fontSize: "4rem" }}>
-              🪖
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)" }}>
+              <Package size={80} strokeWidth={1.2} />
             </div>
           )}
         </div>
@@ -144,9 +144,9 @@ export default function ProductInteractive({ product }: { product: Product }) {
         </button>
 
         <div style={{ marginTop: "3rem", padding: "1.5rem", background: "rgba(255,255,255,0.03)", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-          <p>✅ <strong>Material:</strong> PLA / ABS resistente a impactos.</p>
-          <p>✈️ <strong>Envíos:</strong> A todo Uruguay (DAC / Correo Uruguayo).</p>
-          <p>🏎️ <strong>Instalación:</strong> Todos nuestros productos incluyen cinta doble cara de alta resistencia, soporta viento y altas velocidades.</p>
+          <p style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><CheckCircle size={15} style={{ flexShrink: 0, marginTop: 2, color: "var(--success)" }} /> <span><strong>Material:</strong> PLA / ABS resistente a impactos.</span></p>
+          <p style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><Truck size={15} style={{ flexShrink: 0, marginTop: 2, color: "var(--accent-blue)" }} /> <span><strong>Envíos:</strong> A todo Uruguay (DAC / Correo Uruguayo).</span></p>
+          <p style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><Zap size={15} style={{ flexShrink: 0, marginTop: 2, color: "var(--accent-pink)" }} /> <span><strong>Instalación:</strong> Todos nuestros productos incluyen cinta doble cara de alta resistencia, soporta viento y altas velocidades.</span></p>
         </div>
       </div>
     </>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   User, Truck, CreditCard, CheckCircle2, ChevronRight, ChevronLeft,
-  Home, Package, MapPin, Phone, FileText, Info, Trash2, Star, Pencil,
+  Home, Package, MapPin, Phone, FileText, Info, Trash2, Star, Pencil, MessageCircle,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useCart, getUnitPrice, type CartProduct } from "@/lib/CartContext";
@@ -850,7 +850,7 @@ function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, 
             opacity: processingMP ? 0.7 : 1,
           }}
         >
-          {processingMP ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Procesando…</> : <>💳 Pagar con Mercado Pago</>}
+          {processingMP ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Procesando…</> : <><CreditCard size={18} /> Pagar con Mercado Pago</>}
         </button>
         <button
           onClick={onWhatsApp}
@@ -861,7 +861,7 @@ function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, 
             fontWeight: 700, fontSize: "0.95rem",
           }}
         >
-          💬 Confirmar por WhatsApp
+          <MessageCircle size={18} /> Confirmar por WhatsApp
         </button>
       </div>
     </div>

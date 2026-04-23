@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Tag, Plus, Pencil, Trash2, Check, X, Power, GripVertical, Search,
+  Tag, Plus, Pencil, Trash2, Check, X, Power, GripVertical, Search, AlertTriangle,
 } from "lucide-react";
 import Pagination from "@/components/admin/Pagination";
 
@@ -88,6 +88,54 @@ export default function CategoriesClient() {
     await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
     setDeleteId(null);
     load();
+  };
+
+  // ── Drag & Drop ───────────────────────────────────────────────────────────
+  const dragId = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDragStart = (id: string) => {
+    dragId.current = id;
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (dragId.current !== id) setDragOverId(id);
+  };
+
+  const handleDrop = async (targetId: string) => {
+    const fromId = dragId.current;
+    dragId.current = null;
+    setDragOverId(null);
+    if (!fromId || fromId === targetId) return;
+
+    const list = [...categories];
+    const fromIdx = list.findIndex((c) => c.id === fromId);
+    const toIdx = list.findIndex((c) => c.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    const [moved] = list.splice(fromIdx, 1);
+    list.splice(toIdx, 0, moved);
+    const reordered = list.map((c, i) => ({ ...c, sortOrder: i }));
+
+    // Optimistic update
+    setCategories(reordered);
+
+    // Persist all sortOrders
+    await Promise.all(
+      reordered.map((c) =>
+        fetch(`/api/admin/categories/${c.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sortOrder: c.sortOrder }),
+        })
+      )
+    );
+  };
+
+  const handleDragEnd = () => {
+    dragId.current = null;
+    setDragOverId(null);
   };
 
   const q = search.toLowerCase().trim();
@@ -192,21 +240,31 @@ export default function CategoriesClient() {
       ) : (
         <>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {paginated.map((cat) => (
+            {paginated.map((cat) => {
+            const isDragOver = dragOverId === cat.id;
+            return (
             <div
               key={cat.id}
+              draggable
+              onDragStart={() => handleDragStart(cat.id)}
+              onDragOver={(e) => handleDragOver(e, cat.id)}
+              onDrop={() => handleDrop(cat.id)}
+              onDragEnd={handleDragEnd}
               className="admin-row-in glass"
               style={{
                 padding: "0.9rem 1.1rem",
                 borderRadius: "var(--radius-md)",
-                border: "1px solid rgba(255,255,255,0.06)",
+                border: `1px solid ${isDragOver ? "rgba(255,42,133,0.5)" : "rgba(255,255,255,0.06)"}`,
                 display: "flex",
                 alignItems: "center",
                 gap: "0.75rem",
                 opacity: cat.isActive ? 1 : 0.5,
+                transition: "border-color 0.15s, background 0.15s",
+                background: isDragOver ? "rgba(255,42,133,0.06)" : undefined,
+                cursor: "grab",
               }}
             >
-              <GripVertical size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+              <GripVertical size={14} color="var(--text-muted)" style={{ flexShrink: 0, cursor: "grab" }} />
 
               {/* Name / edit */}
               {editId === cat.id ? (
@@ -273,7 +331,7 @@ export default function CategoriesClient() {
                 </>
               )}
             </div>
-          ))}
+          );})}
           </div>
           <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
         </>
@@ -290,8 +348,8 @@ export default function CategoriesClient() {
                 ¿Eliminar <strong>{cat?.name}</strong>?
               </p>
               {cat && cat._count.products > 0 && (
-                <p style={{ fontSize: "0.82rem", color: "var(--warning, #f59e0b)", marginBottom: "1rem" }}>
-                  ⚠️ {cat._count.products} producto{cat._count.products !== 1 ? "s" : ""} quedarán sin categoría.
+                <p style={{ fontSize: "0.82rem", color: "var(--warning, #f59e0b)", marginBottom: "1rem", display: "flex", alignItems: "center", gap: 6 }}>
+                  <AlertTriangle size={14} style={{ flexShrink: 0 }} /> {cat._count.products} producto{cat._count.products !== 1 ? "s" : ""} quedarán sin categoría.
                 </p>
               )}
               <div style={{ display: "flex", gap: "0.75rem", marginTop: "1.5rem" }}>

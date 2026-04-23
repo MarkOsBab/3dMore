@@ -1,10 +1,8 @@
-import { getProducts } from "@/lib/actions";
-import CatalogSection from "@/components/CatalogSection";
+import { getProducts, getFeaturedProducts } from "@/lib/actions";
 import ReviewsSection from "@/components/ReviewsSection";
-import { ArrowRight } from "lucide-react";
+import { Package } from "lucide-react";
 import type { Metadata } from "next";
-
-type Product = Awaited<ReturnType<typeof getProducts>>[number];
+import FeaturedSection from "@/components/FeaturedSection";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const products = await getProducts();
+  const [products, featured] = await Promise.all([getProducts(), getFeaturedProducts()]);
 
   return (
     <main>
@@ -50,8 +48,8 @@ export default async function Home() {
             <p style={{ fontSize: "1.2rem", color: "var(--text-secondary)", marginBottom: "2rem", maxWidth: "500px" }}>
               Accesorios para casco impresos en 3D en Uruguay. Orejitas, cuernos, alas y diseños únicos para personalizar tu casco. Expresá tu estilo en el asfalto.
             </p>
-            <a href="#products" className="btn-primary" style={{ display: "inline-block", padding: "1rem 2rem" }}>
-              Ver Catálogo
+            <a href="#featured" className="btn-primary" style={{ display: "inline-block", padding: "1rem 2rem" }}>
+              Ver Destacados
             </a>
           </div>
 
@@ -62,15 +60,15 @@ export default async function Home() {
               </div>
             ) : (
               <div style={{ width: "100%", aspectRatio: "1/1", borderRadius: "24px", background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)" }}>
-                <span style={{ fontSize: "5rem" }}>🪖</span>
+                <Package size={100} strokeWidth={1} />
               </div>
             )}
           </div>
         </div>
       </section>
 
-      {/* Catalog Section */}
-      <CatalogSection products={products} />
+      {/* Featured Section */}
+      {featured.length > 0 && <FeaturedSection products={featured} />}
 
       {/* Reviews Section */}
       <ReviewsSection />

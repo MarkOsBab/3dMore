@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye } from "lucide-react";
+import { Eye, Package } from "lucide-react";
 
 interface Product {
   id: string;
@@ -72,10 +72,10 @@ export default function ProductCard({ product }: { product: Product }) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "3rem",
+              color: "var(--text-secondary)",
             }}
           >
-            🪖
+            <Package size={64} strokeWidth={1.2} />
           </div>
         )}
         {product.isOffer && (

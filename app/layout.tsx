@@ -7,6 +7,8 @@ import CartToast from "../components/CartToast";
 import { CartProvider } from "../lib/CartContext";
 import { AuthProvider } from "../lib/AuthContext";
 import PublicShell from "@/components/PublicShell";
+import Footer from "@/components/Footer";
+import HashScroller from "@/components/HashScroller";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -151,6 +153,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <HashScroller />
         <AuthProvider>
           <CartProvider>
             <PublicShell>
@@ -159,6 +162,7 @@ export default function RootLayout({
               <CartToast />
             </PublicShell>
             {children}
+            <Footer />
           </CartProvider>
         </AuthProvider>
       </body>
