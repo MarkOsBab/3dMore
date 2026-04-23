@@ -433,7 +433,7 @@ function OrderCard({ order }: { order: OrderRow }) {
     DELIVERED:          { color: "var(--success)",             bg: "rgba(34,197,94,0.1)",    icon: CheckCircle, label: "Entregado"           },
     REJECTED:           { color: "var(--danger)",              bg: "rgba(239,68,68,0.1)",    icon: XCircle,     label: "Rechazado"           },
     CANCELLED:          { color: "var(--text-muted)",          bg: "rgba(255,255,255,0.04)", icon: XCircle,     label: "Cancelado"           },
-  } as Record<string, { color: string; bg: string; icon: React.ElementType; label: string }>)[order.status] ?? {
+  } as Record<string, { color: string; bg: string; icon: React.FC<{ size?: number }>; label: string }>)[order.status] ?? {
     color: "var(--text-muted)", bg: "rgba(255,255,255,0.04)", icon: Clock, label: order.status,
   };
   const Icon = statusMeta.icon;

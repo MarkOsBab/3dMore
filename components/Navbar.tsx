@@ -315,7 +315,7 @@ function MenuLink({
   href, icon: Icon, label, onClick,
 }: {
   href: string;
-  icon: React.ElementType;
+  icon: React.FC<{ size?: number; color?: string }>;
   label: string;
   onClick?: () => void;
 }) {

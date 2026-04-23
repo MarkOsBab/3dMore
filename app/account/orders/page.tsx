@@ -59,7 +59,9 @@ interface Order {
   statusHistory: StatusHistoryEntry[];
 }
 
-const STATUS: Record<OrderStatus, { label: string; detail: string; color: string; bg: string; Icon: React.ElementType }> = {
+type IconComponent = React.FC<{ size?: number; color?: string; style?: React.CSSProperties }>;
+
+const STATUS: Record<OrderStatus, { label: string; detail: string; color: string; bg: string; Icon: IconComponent }> = {
   PENDING:   {
     label: "Pendiente de confirmación",
     detail: "Tu pedido está en espera. Nos comunicaremos a la brevedad para confirmar.",
@@ -97,7 +99,7 @@ const STATUS: Record<OrderStatus, { label: string; detail: string; color: string
   },
 };
 
-const SHIPPING: Record<ShippingMethod, { label: string; Icon: React.ElementType }> = {
+const SHIPPING: Record<ShippingMethod, { label: string; Icon: IconComponent }> = {
   HOME_MVD: { label: "Envío a domicilio (Montevideo)", Icon: Home },
   AGENCY:   { label: "Envío por agencia DAC",          Icon: Truck },
   PICKUP:   { label: "Retiro en domicilio del vendedor", Icon: MapPin },

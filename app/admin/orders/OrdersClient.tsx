@@ -50,7 +50,9 @@ interface Order {
   customerEmail: string | null;
 }
 
-const SHIPPING_LABEL: Record<ShippingMethod, { label: string; Icon: React.ElementType }> = {
+type IconComponent = React.FC<{ size?: number; color?: string; style?: React.CSSProperties }>;
+
+const SHIPPING_LABEL: Record<ShippingMethod, { label: string; Icon: IconComponent }> = {
   HOME_MVD: { label: "Domicilio MVD", Icon: Home },
   AGENCY:   { label: "Agencia DAC",   Icon: Package },
   PICKUP:   { label: "Retiro",        Icon: MapPin },
@@ -60,7 +62,7 @@ interface Props {
   initialOrders: Order[];
 }
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; Icon: React.ElementType }> = {
+const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bg: string; Icon: IconComponent }> = {
   PENDING:            { label: "Pend. de pago",     color: "var(--warning, #f59e0b)",  bg: "rgba(245,158,11,0.12)",  Icon: Clock },
   APPROVED:           { label: "Pend. confirmar",   color: "#a78bfa",                  bg: "rgba(167,139,250,0.12)", Icon: CheckCircle },
   CONFIRMED:          { label: "En proceso",         color: "var(--accent-blue)",       bg: "rgba(59,130,246,0.12)",  Icon: Package },

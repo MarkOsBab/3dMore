@@ -928,7 +928,7 @@ function Field({ label, value, onChange, icon: Icon, placeholder }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  icon?: React.ElementType;
+  icon?: React.FC<{ size?: number; style?: React.CSSProperties }>;
   placeholder?: string;
 }) {
   return (
@@ -953,7 +953,7 @@ function Field({ label, value, onChange, icon: Icon, placeholder }: {
 function MethodCard({ active, onClick, icon: Icon, title, subtitle }: {
   active: boolean;
   onClick: () => void;
-  icon: React.ElementType;
+  icon: React.FC<{ size?: number; style?: React.CSSProperties }>;
   title: string;
   subtitle: string;
 }) {
