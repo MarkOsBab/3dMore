@@ -30,10 +30,18 @@ model Product {
   isOffer     Boolean   @default(false)
   discountPct Float?    @default(0)
   thumbnail   String?
+  // 3D viewer initial camera (spherical coords around the model)
+  viewerYaw     Float     @default(0)    // radians, rotation around Y
+  viewerPitch   Float     @default(0)    // radians, elevation (0 = frontal)
+  viewerZoom    Float     @default(3)    // camera distance to target
+  viewerTargetX Float     @default(0)    // camera look-at X
+  viewerTargetY Float     @default(0)    // camera look-at Y
+  viewerTargetZ Float     @default(0)    // camera look-at Z
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   variants ProductVariant[]
+  parts    ProductPart[]
 
   @@index([categoryId])
 }
@@ -47,7 +55,43 @@ model ProductVariant {
   price       Float?
   isOffer     Boolean  @default(false)
   discountPct Float?   @default(0)
+  partColors  Json?    // { [partId]: colorId } when the product has 3D parts
   createdAt   DateTime @default(now())
+}
+
+model Color {
+  id         String        @id @default(cuid())
+  name       String        @unique
+  hex        String        // "#7c3aed"
+  isActive   Boolean       @default(true)
+  sortOrder  Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  defaultFor ProductPart[]
+}
+
+model ProductPart {
+  id             String   @id @default(cuid())
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name           String
+  modelUrl       String
+  format         String   // "stl" | "glb" | "gltf"
+  positionX      Float    @default(0)
+  positionY      Float    @default(0)
+  positionZ      Float    @default(0)
+  rotationX      Float    @default(0)
+  rotationY      Float    @default(0)
+  rotationZ      Float    @default(0)
+  scale          Float    @default(1)
+  defaultColorId String?
+  defaultColor   Color?   @relation(fields: [defaultColorId], references: [id], onDelete: SetNull)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([productId])
 }
 
 model PromoCode {

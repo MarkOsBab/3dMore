@@ -131,6 +131,11 @@ export default function CartModal() {
                         Color: {item.variantColorName}
                       </p>
                     )}
+                    {item.customColors && Object.keys(item.customColors).length > 0 && (
+                      <p style={{ fontSize: "0.75rem", color: "var(--accent-pink)", marginBottom: "0.15rem", lineHeight: 1.4 }}>
+                        {Object.entries(item.customColors).map(([part, col]) => `${part}: ${col}`).join(" · ")}
+                      </p>
+                    )}
                     <p style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>
                       Cant: {item.quantity}
                       {item.isOffer && item.discountPercentage ? (

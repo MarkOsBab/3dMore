@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createVariant, deleteVariant, updateVariant } from "@/lib/actions";
 import { ImageUploader } from "./ImageUploader";
-import { Trash2, Plus, Layers, X, Palette, Sparkles, Pencil } from "lucide-react";
+import { Trash2, Plus, Layers, X, Palette, Sparkles, Pencil, Box } from "lucide-react";
 import { useConfirm, useAlert } from "@/components/admin/ConfirmDialog";
 
 interface Variant {
@@ -13,7 +13,11 @@ interface Variant {
   price: number | null;
   isOffer: boolean;
   discountPct: number | null;
+  partColors?: Record<string, string> | null;
 }
+
+interface ColorOpt { id: string; name: string; hex: string; isActive: boolean; }
+interface PartOpt  { id: string; name: string; defaultColorId: string | null; defaultColor: { hex: string } | null; }
 
 interface Props {
   productId: string;
@@ -38,6 +42,27 @@ export default function VariantForm({ productId, productName, productPrice, vari
   const [isOffer, setIsOffer] = useState(false);
   const [discountPct, setDiscountPct] = useState("0");
 
+  // Parts & palette (loaded once)
+  const [parts, setParts] = useState<PartOpt[]>([]);
+  const [colors, setColors] = useState<ColorOpt[]>([]);
+  const [partColors, setPartColors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [partsRes, colorsRes] = await Promise.all([
+        fetch(`/api/admin/parts?productId=${productId}`),
+        fetch("/api/admin/colors"),
+      ]);
+      if (cancelled) return;
+      if (partsRes.ok)  setParts(await partsRes.json());
+      if (colorsRes.ok) setColors(await colorsRes.json());
+    })();
+    return () => { cancelled = true; };
+  }, [productId]);
+
+  const activeColors = colors.filter((c) => c.isActive);
+
   const resetForm = () => {
     setColorName("");
     setImageUrl("");
@@ -46,6 +71,7 @@ export default function VariantForm({ productId, productName, productPrice, vari
     setIsOffer(false);
     setDiscountPct("0");
     setEditTarget(null);
+    setPartColors({});
   };
 
   const handleStartEdit = (v: Variant) => {
@@ -56,6 +82,7 @@ export default function VariantForm({ productId, productName, productPrice, vari
     setPrice(v.price?.toString() ?? "");
     setIsOffer(v.isOffer);
     setDiscountPct(v.discountPct?.toString() ?? "0");
+    setPartColors((v.partColors as Record<string, string>) ?? {});
   };
 
   const handleSave = async () => {
@@ -70,6 +97,7 @@ export default function VariantForm({ productId, productName, productPrice, vari
           price: useCustomPrice && price ? parseFloat(price) : null,
           isOffer,
           discountPct: isOffer ? parseFloat(discountPct) || 0 : 0,
+          partColors: parts.length > 0 ? partColors : null,
         });
       } else {
         await createVariant({
@@ -79,6 +107,7 @@ export default function VariantForm({ productId, productName, productPrice, vari
           price: useCustomPrice && price ? parseFloat(price) : null,
           isOffer,
           discountPct: isOffer ? parseFloat(discountPct) || 0 : 0,
+          partColors: parts.length > 0 ? partColors : null,
         });
       }
       resetForm();
@@ -296,6 +325,63 @@ export default function VariantForm({ productId, productName, productPrice, vari
                     style={{ paddingRight: "2.5rem" }}
                   />
                   <span style={{ position: "absolute", right: "0.9rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-secondary)" }}>%</span>
+                </div>
+              </div>
+            )}
+
+            {/* Colores por parte 3D */}
+            {parts.length > 0 && (
+              <div style={{
+                padding: "0.85rem 1rem",
+                borderRadius: 10,
+                background: "rgba(139,92,246,0.04)",
+                border: "1px solid rgba(139,92,246,0.15)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: "0.75rem" }}>
+                  <Box size={14} color="#a78bfa" />
+                  <span style={{ fontSize: "0.78rem", fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase", color: "#a78bfa" }}>
+                    Colores por parte 3D
+                  </span>
+                </div>
+                <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginBottom: "0.75rem" }}>
+                  Asigná un color a cada parte para esta variante. Si dejás vacío, usa el color por defecto de la parte.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {parts.map((part) => {
+                    const selectedColorId = partColors[part.id] ?? "";
+                    const selectedColor   = activeColors.find((c) => c.id === selectedColorId);
+                    const fallbackHex     = part.defaultColor?.hex;
+                    return (
+                      <div key={part.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{
+                          width: 26, height: 26, borderRadius: 6, flexShrink: 0,
+                          background: selectedColor?.hex ?? fallbackHex ?? "rgba(255,255,255,0.08)",
+                          border: "1px solid rgba(255,255,255,0.15)",
+                        }} />
+                        <span style={{ fontSize: "0.85rem", flex: "0 0 auto", minWidth: 90 }}>
+                          {part.name}
+                        </span>
+                        <select
+                          className="admin-input"
+                          value={selectedColorId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setPartColors((prev) => {
+                              const next = { ...prev };
+                              if (val) next[part.id] = val; else delete next[part.id];
+                              return next;
+                            });
+                          }}
+                          style={{ flex: 1, fontSize: "0.85rem", padding: "0.4rem 0.6rem" }}
+                        >
+                          <option value="">— Por defecto{part.defaultColor ? "" : ""} —</option>
+                          {activeColors.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

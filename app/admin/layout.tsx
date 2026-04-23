@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut, Star, Menu, X } from "lucide-react";
+import { Package, Tag, LayoutDashboard, ExternalLink, ShieldCheck, ShoppingBag, Truck, Layers, LogOut, Star, Menu, X, Palette } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { ConfirmProvider } from "@/components/admin/ConfirmDialog";
 import { useState } from "react";
@@ -10,6 +10,7 @@ const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Productos", icon: Package },
   { href: "/admin/categories", label: "Categorías", icon: Layers },
+  { href: "/admin/colors", label: "Paleta de colores", icon: Palette },
   { href: "/admin/promos", label: "Promociones", icon: Tag },
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingBag },
   { href: "/admin/shipping", label: "Envíos", icon: Truck },
