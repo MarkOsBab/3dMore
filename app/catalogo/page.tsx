@@ -5,7 +5,7 @@ import FeaturedSection from "@/components/FeaturedSection";
 import { Package } from "lucide-react";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+// searchParams already forces dynamic rendering per-request; no explicit export needed
 
 export const metadata: Metadata = {
   title: "Catálogo de Accesorios para Casco — 3DMORE",

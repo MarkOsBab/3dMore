@@ -4,7 +4,8 @@ import { Package } from "lucide-react";
 import type { Metadata } from "next";
 import FeaturedSection from "@/components/FeaturedSection";
 
-export const dynamic = "force-dynamic";
+// Cache indefinitely on Vercel CDN; invalidated on-demand via revalidatePath("/") in actions.ts
+export const revalidate = false;
 
 export const metadata: Metadata = {
   title: "Accesorios para casco de moto impresos en 3D — Uruguay",

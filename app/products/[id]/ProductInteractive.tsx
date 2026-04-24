@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useCart } from "@/lib/CartContext";
 import { ShoppingCart, Package, CheckCircle, Truck, Zap } from "lucide-react";
 import { ViewerSkeleton } from "@/components/ProductModelViewer";
 
 const ProductModelViewer = dynamic(() => import("@/components/ProductModelViewer"), {
   ssr: false,
-  loading: () => <ViewerSkeleton />,
+  loading: () => <ViewerSkeleton height="100%" />,
 });
 
 interface Variant {
@@ -143,8 +144,10 @@ export default function ProductInteractive({ product }: { product: Product }) {
       <div>
         <div
           className="glass"
-          style={{ width: "100%", aspectRatio: "1/1", borderRadius: "24px", overflow: "hidden", marginBottom: "1.5rem" }}
+          style={{ position: "relative", width: "100%", aspectRatio: "1/1", borderRadius: "24px", overflow: "hidden", marginBottom: "1.5rem" }}
         >
+          {/* Inner wrapper fills the aspect-ratio container reliably on all browsers (incl. Safari iOS) */}
+          <div style={{ position: "absolute", inset: 0 }}>
           {hasModel ? (
             <ProductModelViewer
               parts={parts}
@@ -160,16 +163,20 @@ export default function ProductInteractive({ product }: { product: Product }) {
               }}
             />
           ) : displayImage ? (
-            <img
+            <Image
               src={displayImage}
               alt={selected ? `${product.name} - ${selected.colorName}` : product.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              style={{ objectFit: "cover" }}
+              priority
             />
           ) : (
             <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-secondary)" }}>
               <Package size={80} strokeWidth={1.2} />
             </div>
           )}
+          </div>
         </div>
 
         {hasModel ? (
@@ -259,7 +266,13 @@ export default function ProductInteractive({ product }: { product: Product }) {
                     transition: "border-color 0.2s",
                   }}
                 >
-                  <img src={v.imageUrl} alt={v.colorName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <Image
+                    src={v.imageUrl}
+                    alt={v.colorName}
+                    width={64}
+                    height={64}
+                    style={{ objectFit: "cover", display: "block" }}
+                  />
                 </button>
               ))}
             </div>

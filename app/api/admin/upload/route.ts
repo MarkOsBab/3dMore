@@ -59,7 +59,12 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabaseAdmin.storage
     .from(bucket)
-    .upload(fileName, buffer, { upsert: false, contentType });
+    .upload(fileName, buffer, {
+      upsert: false,
+      contentType,
+      // Files are content-addressed (timestamp + random suffix) — safe to cache indefinitely
+      cacheControl: "public, max-age=31536000, immutable",
+    });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -11,7 +11,7 @@ if (typeof window !== "undefined") {
   };
 }
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useLoader, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Center, Bounds, Environment, ContactShadows } from "@react-three/drei";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
@@ -326,6 +326,12 @@ function CameraBridge({
   return null;
 }
 
+/** Fires onLoaded once the Suspense boundary inside Canvas has resolved. */
+function SceneLoaded({ onLoaded }: { onLoaded: () => void }) {
+  useEffect(() => { onLoaded(); }, [onLoaded]);
+  return null;
+}
+
 export default function ProductModelViewer({
   parts,
   partColors,
@@ -341,6 +347,7 @@ export default function ProductModelViewer({
   const controlsRef = useRef<any>(null);
   const contentRef = useRef<THREE.Group | null>(null);
   const [cx, cy, cz] = viewToPosition(view);
+  const [loaded, setLoaded] = useState(false);
 
   const bg = getViewerBackground(partColors);
 
@@ -395,6 +402,7 @@ export default function ProductModelViewer({
           )}
           <ContactShadows position={[0, -0.6, 0]} opacity={0.4} scale={4} blur={2.5} far={2} />
           <Environment preset="studio" />
+          <SceneLoaded onLoaded={() => setLoaded(true)} />
         </Suspense>
 
         <CameraBridge initialView={view} controlsRef={controlsRef} onReady={onReady} contentRef={contentRef} />
@@ -417,6 +425,27 @@ export default function ProductModelViewer({
           }}
         />
       </Canvas>
+
+      {/* Loading overlay: visible until all models are ready */}
+      {!loaded && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            borderRadius: "24px",
+            background: bg.style,
+            display: "grid",
+            placeItems: "center",
+            zIndex: 10,
+            transition: "opacity 0.3s ease",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "var(--text-secondary)" }}>
+            <Loader2 size={28} className="spin" />
+            <span style={{ fontSize: "0.85rem" }}>Cargando modelo 3D…</span>
+          </div>
+        </div>
+      )}
 
       <noscript>
         <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#aaa" }}>

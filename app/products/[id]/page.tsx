@@ -6,7 +6,8 @@ import ProductInteractive from "./ProductInteractive";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
-export const dynamic = "force-dynamic";
+// Serve from Vercel CDN; invalidated on-demand via revalidatePath(`/products/${id}`) in actions.ts
+export const revalidate = false;
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://3d-more.vercel.app";
 
@@ -127,7 +128,7 @@ export default async function ProductPage({
       />
 
       <Link
-        href="/#products"
+        href="/catalogo"
         style={{ display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--text-secondary)", marginBottom: "2rem" }}
         aria-label="Volver al catálogo de accesorios para casco"
       >

@@ -211,6 +211,10 @@ button:active:not(:disabled) { transform: scale(0.97); }
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* Simple rotation helper — use on any icon/element (e.g. Lucide Loader2) */
+.spin {
+  animation: spin 0.75s linear infinite;
+}
 .spinner {
   width: 40px;
   height: 40px;
