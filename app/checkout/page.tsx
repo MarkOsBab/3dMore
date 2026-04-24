@@ -275,7 +275,13 @@ export default function CheckoutPage() {
     };
 
     const orderText = items
-      .map((item) => `\u2022 ${item.quantity}x ${item.name}${item.variantColorName ? ` (${item.variantColorName})` : ""} \u2014 $${(getUnitPrice(item) * item.quantity).toFixed(0)}`)
+      .map((item) => {
+        const colorLabel = item.variantColorName
+          ?? (item.customColors && Object.keys(item.customColors).length > 0
+            ? Object.entries(item.customColors).map(([p, c]) => `${p}: ${c}`).join(" / ")
+            : null);
+        return `\u2022 ${item.quantity}x ${item.name}${colorLabel ? ` (${colorLabel})` : ""} \u2014 $${(getUnitPrice(item) * item.quantity).toFixed(0)}`;
+      })
       .join("\n");
 
     const shippingText =
@@ -802,12 +808,18 @@ function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, 
 
       <ReviewBlock title="Productos">
         <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-          {items.map((item: CartProduct & { quantity: number }) => (
-            <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem" }}>
-              <span>{item.quantity}× {item.name}{item.variantColorName ? ` (${item.variantColorName})` : ""}</span>
-              <span style={{ fontFamily: "var(--font-mono)" }}>${(getUnitPrice(item) * item.quantity).toFixed(0)}</span>
-            </div>
-          ))}
+          {items.map((item: CartProduct & { quantity: number }) => {
+            const colorLabel = item.variantColorName
+              ?? (item.customColors && Object.keys(item.customColors).length > 0
+                ? Object.entries(item.customColors).map(([p, c]) => `${p}: ${c}`).join(" · ")
+                : null);
+            return (
+              <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.88rem" }}>
+                <span>{item.quantity}× {item.name}{colorLabel ? ` (${colorLabel})` : ""}</span>
+                <span style={{ fontFamily: "var(--font-mono)" }}>${(getUnitPrice(item) * item.quantity).toFixed(0)}</span>
+              </div>
+            );
+          })}
           {promoCode && (
             <p style={{ fontSize: "0.8rem", color: "var(--success)", marginTop: 4 }}>
               🏷 {promoCode} aplicado (-{promoDiscount}%)
@@ -893,6 +905,9 @@ function OrderSummary({ items, subtotal, total, promoCode, promoDiscount, shippi
               <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)" }}>
                 {item.quantity} × ${getUnitPrice(item).toFixed(0)}
                 {item.variantColorName ? ` · ${item.variantColorName}` : ""}
+                {!item.variantColorName && item.customColors && Object.keys(item.customColors).length > 0
+                  ? ` · ${Object.entries(item.customColors).map(([p, c]) => `${p}: ${c}`).join(" / ")}`
+                  : ""}
               </p>
             </div>
             <span style={{ fontSize: "0.82rem", fontFamily: "var(--font-mono)" }}>${(getUnitPrice(item) * item.quantity).toFixed(0)}</span>
