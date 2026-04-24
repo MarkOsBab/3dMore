@@ -678,6 +678,107 @@ button:active:not(:disabled) { transform: scale(0.97); }
 }
 
 /* =========================================================================
+   Category Slider
+   ========================================================================= */
+
+/* Hide scrollbar cross-browser */
+.hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Scrollable track */
+.slider-track {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 0.5rem;
+}
+
+/* Individual card slot */
+.slider-card {
+  flex: 0 0 min(280px, 80vw);
+  scroll-snap-align: start;
+}
+
+/* Edge gradient fades */
+.slider-fade-left,
+.slider-fade-right {
+  position: absolute;
+  top: 0;
+  bottom: 0.5rem;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.slider-fade-left  { left: 0;  background: linear-gradient(to right, var(--bg-dark) 0%, transparent 100%); }
+.slider-fade-right { right: 0; background: linear-gradient(to left,  var(--bg-dark) 0%, transparent 100%); }
+
+/* Arrow buttons */
+.slider-arrow {
+  position: absolute;
+  top: 125px; /* vertically centered on ProductCard image (250px height) */
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(10, 10, 15, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: background 0.2s, border-color 0.2s;
+}
+.slider-arrow:hover {
+  background: rgba(255, 42, 133, 0.2);
+  border-color: rgba(255, 42, 133, 0.5);
+}
+.slider-arrow-prev { left: 8px; }
+.slider-arrow-next { right: 8px; }
+
+/* =========================================================================
+   Outline button (secondary CTA)
+   ========================================================================= */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: border-color 0.25s, background 0.25s;
+  white-space: nowrap;
+}
+.btn-outline:hover {
+  border-color: rgba(255, 42, 133, 0.5);
+  background: rgba(255, 42, 133, 0.08);
+}
+
+/* =========================================================================
+   Link secondary (used in sliders, sections)
+   ========================================================================= */
+.link-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+  white-space: nowrap;
+}
+.link-secondary:hover { color: var(--accent-pink); }
+
+/* =========================================================================
    Mobile Responsiveness — Global media queries
    ========================================================================= */
 
