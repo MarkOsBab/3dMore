@@ -690,14 +690,31 @@ button:active:not(:disabled) { transform: scale(0.97); }
   display: flex;
   gap: 1.25rem;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
   padding-bottom: 0.5rem;
+  overscroll-behavior-x: contain;
+  /* No scroll-snap: lo manejamos programáticamente para evitar saltos */
 }
 
 /* Individual card slot */
 .slider-card {
   flex: 0 0 min(280px, 80vw);
-  scroll-snap-align: start;
+}
+
+/* ── Embla carousel ───────────────────────────────────────────────────── */
+.embla-viewport {
+  overflow: hidden;
+  width: 100%;
+}
+.embla-container {
+  display: flex;
+  gap: 1.25rem;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y pinch-zoom;
+}
+.embla-slide {
+  flex: 0 0 min(280px, 80vw);
+  min-width: 0;
 }
 
 /* Edge gradient fades */
@@ -733,6 +750,14 @@ button:active:not(:disabled) { transform: scale(0.97); }
   backdrop-filter: blur(8px);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   transition: background 0.2s, border-color 0.2s;
+  outline: none;
+  /* Sin focus ring para evitar scroll-into-view del navegador */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.slider-arrow:focus-visible {
+  outline: 2px solid var(--accent-pink);
+  outline-offset: 2px;
 }
 .slider-arrow:hover {
   background: rgba(255, 42, 133, 0.2);

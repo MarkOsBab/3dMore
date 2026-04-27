@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
@@ -23,58 +25,38 @@ interface Props {
   products: Product[];
 }
 
-const SCROLL_STEP = 304; // ~280px card + 24px gap
-const AUTO_DELAY_MS = 3800;
-
 export default function CategorySlider({ categoryName, categorySlug, products }: Props) {
-  const trackRef = useRef<HTMLDivElement>(null);
-  const paused = useRef(false);
+  const autoplay = useRef(
+    Autoplay({ delay: 3800, stopOnInteraction: true, stopOnMouseEnter: true })
+  );
+
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: false, align: "start", dragFree: true },
+    [autoplay.current]
+  );
+
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
 
-  const syncArrows = useCallback(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    setCanPrev(el.scrollLeft > 4);
-    setCanNext(el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
-  }, []);
+  const syncButtons = useCallback(() => {
+    if (!emblaApi) return;
+    setCanPrev(emblaApi.canScrollPrev());
+    setCanNext(emblaApi.canScrollNext());
+  }, [emblaApi]);
 
   useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    syncArrows();
-    el.addEventListener("scroll", syncArrows, { passive: true });
-    const ro = new ResizeObserver(syncArrows);
-    ro.observe(el);
+    if (!emblaApi) return;
+    syncButtons();
+    emblaApi.on("select", syncButtons);
+    emblaApi.on("reInit", syncButtons);
     return () => {
-      el.removeEventListener("scroll", syncArrows);
-      ro.disconnect();
+      emblaApi.off("select", syncButtons);
+      emblaApi.off("reInit", syncButtons);
     };
-  }, [syncArrows]);
+  }, [emblaApi, syncButtons]);
 
-  // Auto-advance (only when there are enough cards to scroll)
-  useEffect(() => {
-    const el = trackRef.current;
-    if (!el) return;
-    const id = setInterval(() => {
-      if (paused.current || !el) return;
-      const max = el.scrollWidth - el.clientWidth;
-      if (max <= 4) return; // nothing to scroll
-      if (el.scrollLeft >= max - 4) {
-        el.scrollTo({ left: 0, behavior: "smooth" });
-      } else {
-        el.scrollBy({ left: SCROLL_STEP, behavior: "smooth" });
-      }
-    }, AUTO_DELAY_MS);
-    return () => clearInterval(id);
-  }, []);
-
-  const scroll = (dir: "prev" | "next") => {
-    trackRef.current?.scrollBy({
-      left: dir === "next" ? SCROLL_STEP : -SCROLL_STEP,
-      behavior: "smooth",
-    });
-  };
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
 
   return (
     <div>
@@ -90,7 +72,6 @@ export default function CategorySlider({ categoryName, categorySlug, products }:
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          {/* Accent bar */}
           <div
             style={{
               width: 3,
@@ -130,56 +111,49 @@ export default function CategorySlider({ categoryName, categorySlug, products }:
         )}
       </div>
 
-      {/* Slider wrapper */}
+      {/* Slider */}
       <div style={{ position: "relative" }}>
-        {/* Edge fade overlays */}
-        <div
-          className="slider-fade-left"
-          style={{ opacity: canPrev ? 1 : 0 }}
-          aria-hidden="true"
-        />
-        <div
-          className="slider-fade-right"
-          style={{ opacity: canNext ? 1 : 0 }}
-          aria-hidden="true"
-        />
+        {/* Edge fades */}
+        <div className="slider-fade-left" style={{ opacity: canPrev ? 1 : 0 }} aria-hidden="true" />
+        <div className="slider-fade-right" style={{ opacity: canNext ? 1 : 0 }} aria-hidden="true" />
 
         {/* Prev arrow */}
-        {canPrev && (
-          <button
-            className="slider-arrow slider-arrow-prev"
-            onClick={() => scroll("prev")}
-            aria-label="Producto anterior"
-          >
-            <ChevronLeft size={18} />
-          </button>
-        )}
+        {/* <button
+          type="button"
+          className="slider-arrow slider-arrow-prev"
+          style={{ opacity: canPrev ? 1 : 0, pointerEvents: canPrev ? "auto" : "none" }}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={scrollPrev}
+          tabIndex={-1}
+          aria-hidden="true"
+          aria-label="Anterior"
+        >
+          <ChevronLeft size={18} />
+        </button> */}
 
         {/* Next arrow */}
-        {canNext && (
-          <button
-            className="slider-arrow slider-arrow-next"
-            onClick={() => scroll("next")}
-            aria-label="Producto siguiente"
-          >
-            <ChevronRight size={18} />
-          </button>
-        )}
-
-        {/* Scrollable track */}
-        <div
-          ref={trackRef}
-          className="slider-track hide-scrollbar"
-          onMouseEnter={() => { paused.current = true; }}
-          onMouseLeave={() => { paused.current = false; }}
-          onTouchStart={() => { paused.current = true; }}
-          onTouchEnd={() => { paused.current = false; }}
+        {/* <button
+          type="button"
+          className="slider-arrow slider-arrow-next"
+          style={{ opacity: canNext ? 1 : 0, pointerEvents: canNext ? "auto" : "none" }}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={scrollNext}
+          tabIndex={-1}
+          aria-hidden="true"
+          aria-label="Siguiente"
         >
-          {products.map((p) => (
-            <div key={p.id} className="slider-card">
-              <ProductCard product={p} />
-            </div>
-          ))}
+          <ChevronRight size={18} />
+        </button> */}
+
+        {/* Embla viewport */}
+        <div ref={emblaRef} className="embla-viewport">
+          <div className="embla-container">
+            {products.map((p) => (
+              <div key={p.id} className="embla-slide">
+                <ProductCard product={p} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

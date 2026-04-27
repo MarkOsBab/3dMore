@@ -19,6 +19,8 @@
     "@react-three/fiber": "^9.6.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.0",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
     "iron-session": "^8.0.4",
     "lucide-react": "^1.8.0",
     "mercadopago": "^2.12.0",

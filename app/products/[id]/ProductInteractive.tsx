@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCart } from "@/lib/CartContext";
-import { ShoppingCart, Package, CheckCircle, Truck, Zap } from "lucide-react";
+import { ShoppingCart, Package, CheckCircle, Truck, Zap, Box, Info } from "lucide-react";
 import { ViewerSkeleton } from "@/components/ProductModelViewer";
 
 const ProductModelViewer = dynamic(() => import("@/components/ProductModelViewer"), {
@@ -61,7 +61,20 @@ export default function ProductInteractive({ product }: { product: Product }) {
   const [selected, setSelected] = useState<Variant | null>(product.variants[0] ?? null);
   // Per-part custom color override chosen via the palette swatches (partId -> colorId)
   const [customPartColors, setCustomPartColors] = useState<Record<string, string>>({});
+  // "model" = show 3D viewer; number = index in referenceImages
+  const [viewMode, setViewMode] = useState<"model" | number>("model");
   const { addToCart } = useCart();
+
+  // Collect all reference photos (thumbnail + variant images) deduplicated
+  const referenceImages = useMemo(() => {
+    const seen = new Set<string>();
+    const imgs: string[] = [];
+    if (product.thumbnail) { seen.add(product.thumbnail); imgs.push(product.thumbnail); }
+    for (const v of product.variants) {
+      if (v.imageUrl && !seen.has(v.imageUrl)) { seen.add(v.imageUrl); imgs.push(v.imageUrl); }
+    }
+    return imgs;
+  }, [product.thumbnail, product.variants]);
 
   const basePrice = selected?.price ?? product.price;
   const effectiveIsOffer = selected ? selected.isOffer : product.isOffer;
@@ -148,7 +161,29 @@ export default function ProductInteractive({ product }: { product: Product }) {
         >
           {/* Inner wrapper fills the aspect-ratio container reliably on all browsers (incl. Safari iOS) */}
           <div style={{ position: "absolute", inset: 0 }}>
-          {hasModel ? (
+          {hasModel && typeof viewMode === "number" ? (
+            /* Reference photo view */
+            <>
+              <Image
+                src={referenceImages[viewMode]}
+                alt={`${product.name} - foto de referencia ${viewMode + 1}`}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                style={{ objectFit: "cover" }}
+              />
+              {/* Notice overlay */}
+              <div style={{
+                position: "absolute", bottom: 0, left: 0, right: 0,
+                padding: "0.6rem 1rem",
+                background: "linear-gradient(transparent, rgba(0,0,0,0.82))",
+                display: "flex", alignItems: "center", gap: "0.45rem",
+                fontSize: "0.76rem", color: "rgba(255,255,255,0.8)",
+              }}>
+                <Info size={13} style={{ flexShrink: 0, color: "#60aaff" }} />
+                Foto de referencia — el color real se configura en el visor 3D
+              </div>
+            </>
+          ) : hasModel ? (
             <ProductModelViewer
               parts={parts}
               partColors={partColors}
@@ -179,8 +214,76 @@ export default function ProductInteractive({ product }: { product: Product }) {
           </div>
         </div>
 
+        {/* ── Media strip: only when 3D product also has photos ────────── */}
+        {hasModel && referenceImages.length > 0 && (
+          <div style={{
+            display: "flex",
+            gap: "0.5rem",
+            overflowX: "auto",
+            paddingBottom: "0.25rem",
+            marginBottom: "1.25rem",
+            scrollbarWidth: "none",
+          }}>
+            {/* 3D viewer tab */}
+            <button
+              type="button"
+              onClick={() => setViewMode("model")}
+              title="Ver modelo 3D"
+              style={{
+                width: 64, height: 64, flexShrink: 0,
+                borderRadius: 10,
+                border: `2px solid ${viewMode === "model" ? "var(--accent-pink)" : "rgba(255,255,255,0.12)"}`,
+                background: "rgba(255,255,255,0.05)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer",
+                transition: "border-color 0.2s",
+              }}
+            >
+              <Box size={20} style={{ color: viewMode === "model" ? "var(--accent-pink)" : "var(--text-secondary)" }} />
+            </button>
+
+            {/* Reference photos */}
+            {referenceImages.map((img, i) => (
+              <button
+                key={img}
+                type="button"
+                onClick={() => setViewMode(i)}
+                title={`Foto de referencia ${i + 1}`}
+                style={{
+                  width: 64, height: 64, flexShrink: 0,
+                  borderRadius: 10,
+                  border: `2px solid ${viewMode === i ? "var(--accent-pink)" : "rgba(255,255,255,0.12)"}`,
+                  overflow: "hidden", padding: 0, cursor: "pointer",
+                  position: "relative",
+                  transition: "border-color 0.2s",
+                }}
+              >
+                <Image src={img} alt={`Foto ${i + 1}`} fill sizes="64px" style={{ objectFit: "cover" }} />
+              </button>
+            ))}
+          </div>
+        )}
+
         {hasModel ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+            {/* Color info callout */}
+            <div style={{
+              display: "flex", alignItems: "flex-start", gap: "0.5rem",
+              padding: "0.65rem 0.9rem",
+              background: "rgba(96, 170, 255, 0.07)",
+              border: "1px solid rgba(96, 170, 255, 0.2)",
+              borderRadius: "10px",
+              fontSize: "0.8rem",
+              color: "rgba(255,255,255,0.72)",
+              lineHeight: 1.45,
+            }}>
+              <Info size={14} style={{ flexShrink: 0, marginTop: 1, color: "#60aaff" }} />
+              <span>
+                El color del producto impreso es el que seleccionás aquí abajo, en el modelo 3D.
+                Las fotos son solo de referencia.
+              </span>
+            </div>
+
             {parts.map((p) => {
               const activeId = activeColorIdByPart[p.id];
               return (
