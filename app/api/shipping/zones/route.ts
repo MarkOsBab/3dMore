@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   if (!session.isAdmin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { name, cost, sortOrder } = body;
+  const { name, cost, sortOrder, isMeetingPoint, meetingPointName } = body;
 
   if (!name || typeof cost !== "number") {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
@@ -35,6 +35,13 @@ export async function POST(req: Request) {
         name: String(name).trim(),
         cost,
         sortOrder: typeof sortOrder === "number" ? sortOrder : 0,
+        isMeetingPoint: isMeetingPoint === null || isMeetingPoint === undefined
+          ? null
+          : Boolean(isMeetingPoint),
+        meetingPointName:
+          typeof meetingPointName === "string" && meetingPointName.trim() !== ""
+            ? meetingPointName.trim()
+            : null,
       },
     });
     return NextResponse.json(zone);

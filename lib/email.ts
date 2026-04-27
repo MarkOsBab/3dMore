@@ -38,15 +38,18 @@ function parseItems(raw: unknown): Item[] {
 
 function parseShipping(method: string, raw: unknown): string {
   const labels: Record<string, string> = {
-    HOME_MVD: "Envío a domicilio",
-    AGENCY: "Agencia de transporte",
+    HOME_MVD: "Punto de encuentro",
+    MEETING_POINT: "Punto de encuentro",
+    HOME_DELIVERY: "Envío a domicilio",
+    AGENCY: "Agencia DAC",
     PICKUP: "Retiro en persona",
   };
   let text = labels[method] ?? method;
   try {
     const sd = typeof raw === "string" ? JSON.parse(raw) : (raw as Record<string, string> | null);
-    if (sd?.address) text += ` — ${sd.address}`;
+    if (sd?.address && method === "HOME_DELIVERY") text += ` — ${sd.address}`;
     if (sd?.zoneName) text += ` (${sd.zoneName})`;
+    if (sd?.meetingPointName && method !== "HOME_DELIVERY") text += ` — ${sd.meetingPointName}`;
     if (sd?.agency) text += ` — Agencia: ${sd.agency}`;
   } catch {
     // ignorar

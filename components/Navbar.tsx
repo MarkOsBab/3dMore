@@ -13,8 +13,16 @@ export default function Navbar() {
   const [badgePulse, setBadgePulse] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   useEffect(() => {
     if (!lastAdded) return;
@@ -83,7 +91,7 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="glass"
+        className={`glass${scrolled || menuOpen || mobileOpen ? " nav-scrolled" : ""}`}
         style={{
           position: "sticky",
           top: 0,
@@ -231,7 +239,7 @@ export default function Navbar() {
       {/* Mobile menu drawer */}
       {mobileOpen && (
         <div
-          className="glass admin-slide-down"
+          className="admin-slide-down"
           style={{
             position: "fixed",
             top: 65,
@@ -243,6 +251,9 @@ export default function Navbar() {
             flexDirection: "column",
             gap: "0.1rem",
             borderBottom: "1px solid rgba(255,255,255,0.08)",
+            background: "rgba(14, 14, 22, 0.98)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
           }}
         >
           <Link

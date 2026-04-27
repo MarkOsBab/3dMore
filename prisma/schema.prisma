@@ -141,13 +141,15 @@ model SavedAddress {
 }
 
 model ShippingZone {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  cost      Float
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  name              String   @unique
+  cost              Float
+  isActive          Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  isMeetingPoint    Boolean? // null = fallback por costo (≤ $100)
+  meetingPointName  String?  // ej: "Plaza del Prado"
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model Order {
@@ -166,6 +168,8 @@ model Order {
   shippingMethod     ShippingMethod @default(PICKUP)
   shippingCost       Float          @default(0)
   shippingData       Json?          // { zoneId?, zoneName?, address?, agency?, notes? }
+  trackingCode       String?        // Código de seguimiento (DAC u otra logística)
+  trackingCarrier    String?        // Empresa de logística (ej: "DAC", "Correo Uruguayo")
   customerFirstName  String?
   customerLastName   String?
   customerDocument   String?
@@ -205,7 +209,9 @@ enum OrderStatus {
 }
 
 enum ShippingMethod {
-  HOME_MVD
+  HOME_MVD       // legacy — alias de MEETING_POINT (mantenido para pedidos antiguos)
+  MEETING_POINT  // entrega en un punto de encuentro público (zona seleccionada)
+  HOME_DELIVERY  // entrega a domicilio dentro de una zona-punto-de-encuentro elegible
   AGENCY
   PICKUP
 }

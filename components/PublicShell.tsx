@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import WhatsAppFab from "@/components/WhatsAppFab";
+import CookieBanner from "@/components/CookieBanner";
 
 const HIDE_FAB_PATHS = ["/checkout", "/admin"];
 
@@ -15,6 +16,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
     <>
       {children}
       {showFab && <WhatsAppFab />}
+      <CookieBanner />
     </>
   );
 }

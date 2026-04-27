@@ -17,6 +17,15 @@ export async function PATCH(
       ...(body.cost !== undefined && { cost: Number(body.cost) }),
       ...(body.isActive !== undefined && { isActive: Boolean(body.isActive) }),
       ...(body.sortOrder !== undefined && { sortOrder: Number(body.sortOrder) }),
+      ...(body.isMeetingPoint !== undefined && {
+        isMeetingPoint: body.isMeetingPoint === null ? null : Boolean(body.isMeetingPoint),
+      }),
+      ...(body.meetingPointName !== undefined && {
+        meetingPointName:
+          typeof body.meetingPointName === "string" && body.meetingPointName.trim() !== ""
+            ? body.meetingPointName.trim()
+            : null,
+      }),
     },
   });
   return NextResponse.json(zone);

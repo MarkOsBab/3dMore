@@ -12,7 +12,7 @@ import {
 import { useAuth } from "@/lib/AuthContext";
 
 type OrderStatus = "PENDING" | "APPROVED" | "CONFIRMED" | "READY_FOR_DELIVERY" | "DELIVERED" | "REJECTED" | "CANCELLED";
-type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
+type ShippingMethod = "HOME_MVD" | "MEETING_POINT" | "HOME_DELIVERY" | "AGENCY" | "PICKUP";
 
 interface OrderItem {
   name?: string;
@@ -25,6 +25,7 @@ interface OrderItem {
 
 interface ShippingData {
   zoneName?: string;
+  meetingPointName?: string;
   address?: string;
   agency?: string;
   notes?: string;
@@ -45,6 +46,8 @@ interface Order {
   shippingMethod: ShippingMethod;
   shippingCost: number;
   shippingData: ShippingData | null;
+  trackingCode: string | null;
+  trackingCarrier: string | null;
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;
@@ -100,9 +103,11 @@ const STATUS: Record<OrderStatus, { label: string; detail: string; color: string
 };
 
 const SHIPPING: Record<ShippingMethod, { label: string; Icon: IconComponent }> = {
-  HOME_MVD: { label: "Envío a domicilio (Montevideo)", Icon: Home },
-  AGENCY:   { label: "Envío por agencia DAC",          Icon: Truck },
-  PICKUP:   { label: "Retiro en domicilio del vendedor", Icon: MapPin },
+  HOME_MVD:      { label: "Punto de encuentro",         Icon: MapPin },
+  MEETING_POINT: { label: "Punto de encuentro",         Icon: MapPin },
+  HOME_DELIVERY: { label: "Envío a domicilio",          Icon: Home },
+  AGENCY:        { label: "Envío por agencia DAC",      Icon: Truck },
+  PICKUP:        { label: "Retiro en domicilio del vendedor", Icon: MapPin },
 };
 
 export default function AccountOrdersPage() {
@@ -431,10 +436,13 @@ export default function AccountOrdersPage() {
                           )}
                         </div>
 
-                        {order.shippingMethod === "HOME_MVD" && (
+                        {(order.shippingMethod === "HOME_MVD" || order.shippingMethod === "MEETING_POINT" || order.shippingMethod === "HOME_DELIVERY") && (
                           <div style={{ fontSize: "0.88rem", display: "flex", flexDirection: "column", gap: 3 }}>
                             {sd?.zoneName && <p style={{ color: "var(--text-secondary)" }}>📍 Zona: {sd.zoneName}</p>}
-                            {sd?.address  && <p style={{ fontWeight: 500 }}>{sd.address}</p>}
+                            {sd?.meetingPointName && order.shippingMethod !== "HOME_DELIVERY" && (
+                              <p style={{ fontWeight: 500 }}>Punto de encuentro: {sd.meetingPointName}</p>
+                            )}
+                            {sd?.address && order.shippingMethod === "HOME_DELIVERY" && <p style={{ fontWeight: 500 }}>{sd.address}</p>}
                             {sd?.notes    && <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>📝 {sd.notes}</p>}
                           </div>
                         )}
@@ -459,6 +467,30 @@ export default function AccountOrdersPage() {
                               >
                                 <MessageCircle size={14} /> Coordinar por WhatsApp
                               </a>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Tracking */}
+                        {order.trackingCode && order.shippingMethod !== "PICKUP" && (
+                          <div style={{
+                            marginTop: 12,
+                            padding: "0.75rem 0.95rem",
+                            background: "rgba(59,130,246,0.08)",
+                            border: "1px solid rgba(59,130,246,0.25)",
+                            borderRadius: "var(--radius-md)",
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 10,
+                          }}>
+                            <Truck size={16} color="var(--accent-blue)" style={{ flexShrink: 0, marginTop: 2 }} />
+                            <div style={{ minWidth: 0 }}>
+                              <p style={{ fontSize: "0.78rem", fontWeight: 600, color: "var(--accent-blue)", textTransform: "uppercase", letterSpacing: 1 }}>
+                                Código de seguimiento{order.trackingCarrier ? ` — ${order.trackingCarrier}` : ""}
+                              </p>
+                              <p style={{ fontSize: "0.95rem", fontFamily: "var(--font-mono)", fontWeight: 700, marginTop: 2, wordBreak: "break-all" }}>
+                                {order.trackingCode}
+                              </p>
                             </div>
                           </div>
                         )}

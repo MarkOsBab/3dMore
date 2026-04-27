@@ -60,6 +60,14 @@ const NAV_LINKS = [
   { label: "Mis pedidos", href: "/account/orders" },
 ];
 
+const LEGAL_LINKS = [
+  { label: "Términos y Condiciones", href: "/legal/terminos" },
+  { label: "Privacidad", href: "/legal/privacidad" },
+  { label: "Cambios y Devoluciones", href: "/legal/devoluciones" },
+  { label: "Envíos", href: "/legal/envios" },
+  { label: "Cookies", href: "/legal/cookies" },
+];
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
@@ -256,6 +264,40 @@ export default function Footer() {
               Envíos a todo Uruguay a través de DAC.
             </p>
           </div>
+        </div>
+
+        {/* Legal */}
+        <div>
+          <p
+            style={{
+              fontSize: "0.72rem",
+              fontWeight: 700,
+              letterSpacing: "1.5px",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: "1.25rem",
+            }}
+          >
+            Legal
+          </p>
+          <nav style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+            {LEGAL_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                style={{
+                  color: "var(--text-secondary)",
+                  textDecoration: "none",
+                  fontSize: "0.9rem",
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-primary)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-secondary)")}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
 

@@ -425,6 +425,14 @@ export default function ProductInteractive({ product }: { product: Product }) {
           <p style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><Truck size={15} style={{ flexShrink: 0, marginTop: 2, color: "var(--accent-blue)" }} /> <span><strong>Envíos:</strong> A todo Uruguay (DAC / Correo Uruguayo).</span></p>
           <p style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><Zap size={15} style={{ flexShrink: 0, marginTop: 2, color: "var(--accent-pink)" }} /> <span><strong>Instalación:</strong> Todos nuestros productos incluyen cinta doble cara de alta resistencia, soporta viento y altas velocidades.</span></p>
         </div>
+
+        <p style={{ marginTop: "1rem", fontSize: "0.72rem", color: "var(--text-muted)", lineHeight: 1.5 }}>
+          Accesorio decorativo. No forma parte del casco homologado ni reemplaza sus componentes de seguridad.
+          Su instalación es responsabilidad del usuario. Más información en nuestros{" "}
+          <a href="/legal/terminos" style={{ color: "var(--text-secondary)", textDecoration: "underline" }}>
+            términos y condiciones
+          </a>.
+        </p>
       </div>
     </>
   );

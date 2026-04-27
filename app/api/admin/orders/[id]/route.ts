@@ -25,7 +25,29 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const { status } = body as { status?: string };
+  const { status, trackingCode, trackingCarrier } = body as {
+    status?: string;
+    trackingCode?: string | null;
+    trackingCarrier?: string | null;
+  };
+
+  // Modo: actualizar solo tracking (sin transición de estado)
+  if (!status && (trackingCode !== undefined || trackingCarrier !== undefined)) {
+    const exists = await prisma.order.findUnique({ where: { id }, select: { id: true } });
+    if (!exists) {
+      return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
+    }
+    const code = (trackingCode ?? "").toString().trim();
+    const carrier = (trackingCarrier ?? "").toString().trim();
+    const updated = await prisma.order.update({
+      where: { id },
+      data: {
+        trackingCode: code === "" ? null : code,
+        trackingCarrier: carrier === "" ? null : carrier,
+      },
+    });
+    return NextResponse.json(updated);
+  }
 
   if (!status) {
     return NextResponse.json({ error: "status requerido" }, { status: 400 });

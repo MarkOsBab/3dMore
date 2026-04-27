@@ -9,14 +9,21 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { useCart, getUnitPrice, type CartProduct } from "@/lib/CartContext";
+import { zoneAllowsHomeDelivery } from "@/lib/shipping";
 
 type Step = 0 | 1 | 2;
-type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
+type ShippingMethod = "HOME_MVD" | "MEETING_POINT" | "HOME_DELIVERY" | "AGENCY" | "PICKUP";
+
+// Helper: true si el método es punto de encuentro o domicilio (todos requieren zona)
+const isMeetingOrHome = (m: ShippingMethod) =>
+  m === "MEETING_POINT" || m === "HOME_DELIVERY" || m === "HOME_MVD";
 
 interface ShippingZone {
   id: string;
   name: string;
   cost: number;
+  isMeetingPoint: boolean | null;
+  meetingPointName: string | null;
 }
 
 interface AddressForm {
@@ -60,7 +67,7 @@ export default function CheckoutPage() {
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Step 2 — Envío
-  const [shippingMethod, setShippingMethod] = useState<ShippingMethod>("HOME_MVD");
+  const [shippingMethod, setShippingMethod] = useState<ShippingMethod>("MEETING_POINT");
   const [zoneId, setZoneId] = useState("");
   const [addrForm, setAddrForm] = useState<AddressForm>({ street: "", doorNumber: "", corner: "", neighborhood: "", postalCode: "" });
   const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null);
@@ -118,8 +125,8 @@ export default function CheckoutPage() {
   // Cálculo de envío
   const selectedZone = zones.find((z) => z.id === zoneId);
   const shippingCost =
-    shippingMethod === "HOME_MVD" ? (selectedZone?.cost ?? 0) :
-    shippingMethod === "AGENCY"   ? 0 : // Coordinar, pago al retiro por agencia
+    isMeetingOrHome(shippingMethod) ? (selectedZone?.cost ?? 0) :
+    shippingMethod === "AGENCY"     ? 0 : // Coordinar, pago al retiro por agencia
     0;
 
   const saveProfile = async () => {
@@ -158,16 +165,21 @@ export default function CheckoutPage() {
     `${a.street} ${a.doorNumber}${a.corner ? ` esq. ${a.corner}` : ""}, ${a.neighborhood}${a.postalCode ? ` (CP: ${a.postalCode})` : ""}`;
 
   const canProceedFromShipping = () => {
-    if (shippingMethod === "HOME_MVD") {
+    if (isMeetingOrHome(shippingMethod)) {
       if (selectedSavedId) return true;
-      return Boolean(zoneId && addrForm.street.trim() && addrForm.doorNumber.trim() && addrForm.neighborhood.trim());
+      const baseOk = Boolean(zoneId && addrForm.neighborhood.trim());
+      // Si es envío a domicilio además requiere calle y número de puerta
+      if (shippingMethod === "HOME_DELIVERY") {
+        return baseOk && Boolean(addrForm.street.trim() && addrForm.doorNumber.trim());
+      }
+      return baseOk;
     }
     if (shippingMethod === "AGENCY") return Boolean(agency.trim());
     return true;
   };
 
   const handleContinueFromShipping = async () => {
-    if (shippingMethod === "HOME_MVD" && saveAddress && !selectedSavedId && user) {
+    if (shippingMethod === "HOME_DELIVERY" && saveAddress && !selectedSavedId && user) {
       setSavingAddress(true);
       try {
         await fetch("/api/shipping/addresses", {
@@ -238,9 +250,13 @@ export default function CheckoutPage() {
           shippingMethod,
           shippingCost,
           shippingData: {
-            zoneId: shippingMethod === "HOME_MVD" ? zoneId : undefined,
+            zoneId: isMeetingOrHome(shippingMethod) ? zoneId : undefined,
             zoneName: selectedZone?.name,
-            address: shippingMethod === "HOME_MVD" ? composeAddress(addrForm) : undefined,
+            address: shippingMethod === "HOME_DELIVERY" ? composeAddress(addrForm) : undefined,
+            meetingPointName:
+              shippingMethod === "MEETING_POINT" || shippingMethod === "HOME_MVD"
+                ? (selectedZone?.meetingPointName ?? undefined)
+                : undefined,
             agency: shippingMethod === "AGENCY" ? agency : undefined,
             notes: notes || undefined,
           },
@@ -285,8 +301,10 @@ export default function CheckoutPage() {
       .join("\n");
 
     const shippingText =
-      shippingMethod === "HOME_MVD"
+      shippingMethod === "HOME_DELIVERY"
         ? `${E.house} Env\u00edo a domicilio \u2014 ${selectedZone?.name}: ${composeAddress(addrForm)} ($${shippingCost} efectivo/transferencia al entregar)`
+        : (shippingMethod === "MEETING_POINT" || shippingMethod === "HOME_MVD")
+        ? `${E.house} Punto de encuentro \u2014 ${selectedZone?.name}${selectedZone?.meetingPointName ? ` (${selectedZone.meetingPointName})` : ""} ($${shippingCost} efectivo/transferencia al entregar)`
         : shippingMethod === "AGENCY"
         ? `${E.box} Env\u00edo por agencia DAC \u2014 ${agency} (pago al retirar)`
         : `${E.store} Retiro en domicilio del vendedor (a coordinar)`;
@@ -375,6 +393,7 @@ export default function CheckoutPage() {
                 method={shippingMethod}
                 shippingCost={shippingCost}
                 zoneName={selectedZone?.name}
+                meetingPointName={selectedZone?.meetingPointName ?? null}
                 address={composeAddress(addrForm)}
                 agency={agency}
                 notes={notes}
@@ -568,9 +587,10 @@ function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrF
 
       <div style={{ display: "grid", gap: "0.6rem", marginBottom: "1.5rem" }}>
         <MethodCard
-          active={method === "HOME_MVD"} onClick={() => setMethod("HOME_MVD")}
-          icon={Home} title="Envío a domicilio (Montevideo)"
-          subtitle="Elegí tu zona — costo fijo"
+          active={method === "MEETING_POINT" || method === "HOME_DELIVERY" || method === "HOME_MVD"}
+          onClick={() => setMethod("MEETING_POINT")}
+          icon={MapPin} title="Punto de encuentro (Montevideo)"
+          subtitle="Coordinamos por WhatsApp — entrega en lugar público de tu zona"
         />
         <MethodCard
           active={method === "AGENCY"} onClick={() => setMethod("AGENCY")}
@@ -579,20 +599,22 @@ function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrF
         />
         <MethodCard
           active={method === "PICKUP"} onClick={() => setMethod("PICKUP")}
-          icon={MapPin} title="Retiro en domicilio"
+          icon={Home} title="Retiro en domicilio"
           subtitle="A coordinar con el vendedor por WhatsApp"
         />
       </div>
 
-      {method === "HOME_MVD" && (
+      {(method === "MEETING_POINT" || method === "HOME_DELIVERY" || method === "HOME_MVD") && (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           {/* Selector de zona */}
           <div>
-            <label style={labelStyle}>Zona de entrega</label>
+            <label style={labelStyle}>Zona / Punto de encuentro</label>
             <select value={zoneId} onChange={(e) => setZoneId(e.target.value)} className="admin-input">
               <option value="">Seleccioná una zona</option>
               {zones.map((z: ShippingZone) => (
-                <option key={z.id} value={z.id}>{z.name} — ${z.cost}</option>
+                <option key={z.id} value={z.id}>
+                  {z.name} — ${z.cost}{z.meetingPointName ? ` · ${z.meetingPointName}` : ""}
+                </option>
               ))}
             </select>
             <p style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
@@ -600,8 +622,54 @@ function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrF
             </p>
           </div>
 
-          {/* Direcciones guardadas */}
-          {savedAddresses.length > 0 && (
+          {/* Toggle: domicilio dentro de la zona (sólo si la zona lo habilita) */}
+          {(() => {
+            const zone = (zones as ShippingZone[]).find((z) => z.id === zoneId);
+            if (!zone) return null;
+            const allowsHome = zoneAllowsHomeDelivery(zone);
+            const isHome = method === "HOME_DELIVERY";
+            if (!allowsHome) {
+              if (zone.meetingPointName) {
+                return (
+                  <div style={{ padding: "0.75rem 0.95rem", background: "rgba(96,170,255,0.08)", border: "1px solid rgba(96,170,255,0.2)", borderRadius: "var(--radius-md)", fontSize: "0.82rem", color: "var(--accent-blue)" }}>
+                    <Info size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+                    Punto de encuentro: <strong>{zone.meetingPointName}</strong>. Coordinaremos d\u00eda y horario por WhatsApp.
+                  </div>
+                );
+              }
+              return null;
+            }
+            return (
+              <label style={{
+                display: "flex", alignItems: "flex-start", gap: 10,
+                padding: "0.7rem 0.85rem",
+                background: isHome ? "rgba(255,42,133,0.06)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${isHome ? "rgba(255,42,133,0.35)" : "rgba(255,255,255,0.08)"}`,
+                borderRadius: "var(--radius-md)",
+                cursor: "pointer",
+                transition: "border-color 0.2s",
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isHome}
+                  onChange={(e) => setMethod(e.target.checked ? "HOME_DELIVERY" : "MEETING_POINT")}
+                  style={{ marginTop: 3, accentColor: "var(--accent-pink)", flexShrink: 0 }}
+                />
+                <div>
+                  <p style={{ fontSize: "0.88rem", fontWeight: 600 }}>
+                    Prefiero recibir en mi domicilio (dentro de esta zona)
+                  </p>
+                  <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                    Disponible solo para barrios cubiertos por este punto de encuentro
+                    {zone.meetingPointName ? ` (${zone.meetingPointName})` : ""}.
+                  </p>
+                </div>
+              </label>
+            );
+          })()}
+
+          {/* Direcciones guardadas — solo cuando es HOME_DELIVERY */}
+          {method === "HOME_DELIVERY" && savedAddresses.length > 0 && (
             <div>
               <label style={labelStyle}>Direcciones guardadas</label>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
@@ -714,8 +782,8 @@ function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrF
             </div>
           )}
 
-          {/* Formulario de dirección (nueva o si no hay guardadas) */}
-          {selectedSavedId === null && (
+          {/* Formulario de dirección (sólo cuando el cliente eligió domicilio) */}
+          {method === "HOME_DELIVERY" && selectedSavedId === null && (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.85rem" }}>
                 <Field label="Calle" value={addrForm.street} onChange={(v: string) => setAddrForm({ ...addrForm, street: v })} placeholder="Ej: Av. 18 de Julio" />
@@ -780,11 +848,16 @@ function StepShipping({ user, zones, method, setMethod, zoneId, setZoneId, addrF
 
 // ───────────────────────────────────────────────────────────────── STEP 3 — REVIEW
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, shippingCost, zoneName, address, agency, notes, form, onMP, onWhatsApp, processingMP }: any) {
+function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, shippingCost, zoneName, meetingPointName, address, agency, notes, form, onMP, onWhatsApp, processingMP }: any) {
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const shippingLabel =
-    method === "HOME_MVD" ? `Domicilio — ${zoneName} ($${shippingCost})` :
-    method === "AGENCY"   ? `Agencia DAC — ${agency}` :
-                            "Retiro en domicilio";
+    method === "HOME_DELIVERY"
+      ? `Envío a domicilio — ${zoneName} ($${shippingCost})`
+      : (method === "MEETING_POINT" || method === "HOME_MVD")
+      ? `Punto de encuentro — ${zoneName}${meetingPointName ? ` (${meetingPointName})` : ""} ($${shippingCost})`
+      : method === "AGENCY"
+      ? `Agencia DAC — ${agency}`
+      : "Retiro en domicilio";
 
   return (
     <div>
@@ -795,13 +868,15 @@ function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, 
         <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>CI {form.documentId} · {form.phone}</p>
       </ReviewBlock>
 
-      <ReviewBlock title="Envío">
+      <ReviewBlock title="Entrega">
         <p style={{ fontSize: "0.9rem" }}>{shippingLabel}</p>
-        {address && <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{address}</p>}
+        {method === "HOME_DELIVERY" && address && <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>{address}</p>}
         {notes && <p style={{ fontSize: "0.82rem", color: "var(--text-muted)", marginTop: 4 }}>📝 {notes}</p>}
         {method !== "PICKUP" && (
           <p style={{ fontSize: "0.75rem", color: "var(--warning, #f59e0b)", marginTop: 6, display: "flex", gap: 4, alignItems: "center" }}>
-            <Info size={12} /> El envío se abona al recibir (efectivo o transferencia).
+            <Info size={12} /> {method === "AGENCY"
+              ? "Se abona en la agencia DAC al retirar el paquete."
+              : "Se abona al momento de la entrega (efectivo o transferencia)."}
           </p>
         )}
       </ReviewBlock>
@@ -851,26 +926,70 @@ function StepReview({ items, subtotal, total, promoCode, promoDiscount, method, 
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem", marginTop: "1rem" }}>
+        {/* Acceptance of legal terms */}
+        <label
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "0.6rem",
+            padding: "0.7rem 0.85rem",
+            background: "rgba(255,255,255,0.03)",
+            border: `1px solid ${acceptedTerms ? "rgba(96,170,255,0.3)" : "rgba(255,255,255,0.08)"}`,
+            borderRadius: 10,
+            cursor: "pointer",
+            fontSize: "0.78rem",
+            color: "rgba(255,255,255,0.8)",
+            lineHeight: 1.5,
+            transition: "border-color 0.2s",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            style={{ marginTop: 2, accentColor: "var(--accent-pink)", flexShrink: 0 }}
+          />
+          <span>
+            Acepto los{" "}
+            <a href="/legal/terminos" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-pink)", textDecoration: "underline" }}>
+              Términos y Condiciones
+            </a>
+            , la{" "}
+            <a href="/legal/privacidad" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-pink)", textDecoration: "underline" }}>
+              Política de Privacidad
+            </a>{" "}
+            y la{" "}
+            <a href="/legal/devoluciones" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-pink)", textDecoration: "underline" }}>
+              Política de Cambios y Devoluciones
+            </a>
+            .
+          </span>
+        </label>
+
         <button
           onClick={onMP}
-          disabled={processingMP}
+          disabled={processingMP || !acceptedTerms}
           style={{
             padding: "0.95rem", background: "var(--accent-blue)", color: "white",
-            border: "none", borderRadius: "var(--radius-pill)", cursor: "pointer",
+            border: "none", borderRadius: "var(--radius-pill)",
+            cursor: (processingMP || !acceptedTerms) ? "not-allowed" : "pointer",
             fontWeight: 700, fontSize: "0.95rem", display: "flex",
             alignItems: "center", justifyContent: "center", gap: 8,
-            opacity: processingMP ? 0.7 : 1,
+            opacity: (processingMP || !acceptedTerms) ? 0.55 : 1,
           }}
         >
           {processingMP ? <><span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} /> Procesando…</> : <><CreditCard size={18} /> Pagar con Mercado Pago</>}
         </button>
         <button
           onClick={onWhatsApp}
+          disabled={!acceptedTerms}
           style={{
             padding: "0.95rem", background: "transparent",
             color: "var(--whatsapp)", border: "2px solid var(--whatsapp)",
-            borderRadius: "var(--radius-pill)", cursor: "pointer",
+            borderRadius: "var(--radius-pill)",
+            cursor: !acceptedTerms ? "not-allowed" : "pointer",
             fontWeight: 700, fontSize: "0.95rem",
+            opacity: !acceptedTerms ? 0.55 : 1,
           }}
         >
           <MessageCircle size={18} /> Confirmar por WhatsApp
@@ -918,8 +1037,8 @@ function OrderSummary({ items, subtotal, total, promoCode, promoDiscount, shippi
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "0.75rem", display: "flex", flexDirection: "column", gap: 4, fontSize: "0.85rem" }}>
         <Row label="Subtotal" value={`$${subtotal.toFixed(0)}`} muted />
         {promoDiscount > 0 && <Row label={`Descuento (${promoDiscount}%)`} value={`-$${(subtotal - total).toFixed(0)}`} color="var(--success)" />}
-        {method === "HOME_MVD" && shippingCost > 0 && (
-          <Row label="Envío (a pagar al recibir)" value={`$${shippingCost}`} color="var(--warning, #f59e0b)" />
+        {(method === "HOME_DELIVERY" || method === "MEETING_POINT" || method === "HOME_MVD") && shippingCost > 0 && (
+          <Row label={method === "HOME_DELIVERY" ? "Envío (a pagar al recibir)" : "Costo de entrega (a pagar al recibir)"} value={`$${shippingCost}`} color="var(--warning, #f59e0b)" />
         )}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, fontWeight: 700, fontSize: "1rem" }}>
           <span>Total online</span>

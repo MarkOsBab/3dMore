@@ -7,7 +7,7 @@ import Pagination from "@/components/admin/Pagination";
 const PAGE_SIZE = 10;
 
 type OrderStatus = "PENDING" | "APPROVED" | "CONFIRMED" | "READY_FOR_DELIVERY" | "DELIVERED" | "REJECTED" | "CANCELLED";
-type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
+type ShippingMethod = "HOME_MVD" | "MEETING_POINT" | "HOME_DELIVERY" | "AGENCY" | "PICKUP";
 
 interface OrderItem {
   name?: string;
@@ -42,6 +42,8 @@ interface Order {
   shippingMethod: ShippingMethod;
   shippingCost: number;
   shippingData: ShippingData | null;
+  trackingCode: string | null;
+  trackingCarrier: string | null;
   // datos del cliente
   customerFirstName: string | null;
   customerLastName: string | null;
@@ -53,9 +55,11 @@ interface Order {
 type IconComponent = React.FC<{ size?: number; color?: string; style?: React.CSSProperties }>;
 
 const SHIPPING_LABEL: Record<ShippingMethod, { label: string; Icon: IconComponent }> = {
-  HOME_MVD: { label: "Domicilio MVD", Icon: Home },
-  AGENCY:   { label: "Agencia DAC",   Icon: Package },
-  PICKUP:   { label: "Retiro",        Icon: MapPin },
+  HOME_MVD:       { label: "Punto de encuentro", Icon: MapPin },
+  MEETING_POINT:  { label: "Punto de encuentro", Icon: MapPin },
+  HOME_DELIVERY:  { label: "Domicilio",          Icon: Home },
+  AGENCY:         { label: "Agencia DAC",        Icon: Package },
+  PICKUP:         { label: "Retiro",             Icon: MapPin },
 };
 
 interface Props {
@@ -103,6 +107,21 @@ export default function OrdersClient({ initialOrders }: Props) {
     });
     if (res.ok) {
       setOrders((prev) => prev.map((o) => o.id === id ? { ...o, status } : o));
+    }
+    setUpdatingId(null);
+  };
+
+  const updateTracking = async (id: string, trackingCode: string, trackingCarrier: string) => {
+    setUpdatingId(id);
+    const res = await fetch(`/api/admin/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trackingCode, trackingCarrier }),
+    });
+    if (res.ok) {
+      const code = trackingCode.trim() === "" ? null : trackingCode.trim();
+      const carrier = trackingCarrier.trim() === "" ? null : trackingCarrier.trim();
+      setOrders((prev) => prev.map((o) => o.id === id ? { ...o, trackingCode: code, trackingCarrier: carrier } : o));
     }
     setUpdatingId(null);
   };
@@ -377,6 +396,17 @@ export default function OrdersClient({ initialOrders }: Props) {
                           {sd?.address  && <p style={{ fontSize: "0.85rem", marginTop: 4 }}>{sd.address}</p>}
                           {sd?.agency   && <p style={{ fontSize: "0.85rem", marginTop: 4 }}>Agencia: {sd.agency}</p>}
                           {sd?.notes    && <p style={{ fontSize: "0.78rem", marginTop: 4, color: "var(--text-muted)" }}>📝 {sd.notes}</p>}
+
+                          {/* Tracking */}
+                          {order.shippingMethod !== "PICKUP" && (
+                            <TrackingEditor
+                              orderId={order.id}
+                              defaultCode={order.trackingCode ?? ""}
+                              defaultCarrier={order.trackingCarrier ?? (order.shippingMethod === "AGENCY" ? "DAC" : "")}
+                              onSave={updateTracking}
+                              saving={updatingId === order.id}
+                            />
+                          )}
                         </div>
                       );
                     })()}
@@ -435,6 +465,68 @@ export default function OrdersClient({ initialOrders }: Props) {
         </div>
       )}
       <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPage={setPage} />
+    </div>
+  );
+}
+
+// ───────────────────────────── Editor de tracking
+function TrackingEditor({
+  orderId,
+  defaultCode,
+  defaultCarrier,
+  onSave,
+  saving,
+}: {
+  orderId: string;
+  defaultCode: string;
+  defaultCarrier: string;
+  onSave: (id: string, code: string, carrier: string) => void;
+  saving: boolean;
+}) {
+  const [code, setCode] = useState(defaultCode);
+  const [carrier, setCarrier] = useState(defaultCarrier);
+  const dirty = code.trim() !== defaultCode.trim() || carrier.trim() !== defaultCarrier.trim();
+
+  return (
+    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed rgba(255,255,255,0.06)" }}>
+      <p style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "1px", color: "var(--text-secondary)", textTransform: "uppercase", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: 5 }}>
+        <Truck size={12} /> Seguimiento
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <input
+          className="admin-input"
+          placeholder="Empresa (ej: DAC)"
+          value={carrier}
+          onChange={(e) => setCarrier(e.target.value)}
+          style={{ fontSize: "0.82rem" }}
+        />
+        <input
+          className="admin-input"
+          placeholder="Código de seguimiento"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          style={{ fontSize: "0.82rem", fontFamily: "var(--font-mono)" }}
+        />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+        <button
+          onClick={() => onSave(orderId, code, carrier)}
+          disabled={!dirty || saving}
+          style={{
+            padding: "0.45rem 0.95rem",
+            background: dirty ? "rgba(96,170,255,0.15)" : "rgba(255,255,255,0.04)",
+            border: `1px solid ${dirty ? "rgba(96,170,255,0.4)" : "rgba(255,255,255,0.08)"}`,
+            color: dirty ? "var(--accent-blue)" : "var(--text-muted)",
+            borderRadius: "var(--radius-pill)",
+            fontWeight: 600,
+            fontSize: "0.78rem",
+            cursor: !dirty || saving ? "not-allowed" : "pointer",
+            opacity: !dirty || saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? "Guardando…" : "Guardar tracking"}
+        </button>
+      </div>
     </div>
   );
 }

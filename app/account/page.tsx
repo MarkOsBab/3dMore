@@ -35,7 +35,7 @@ interface OrderRow {
   id: string;
   status: Status;
   total: number;
-  shippingMethod: "HOME_MVD" | "AGENCY" | "PICKUP";
+  shippingMethod: "HOME_MVD" | "MEETING_POINT" | "HOME_DELIVERY" | "AGENCY" | "PICKUP";
   shippingCost: number;
   items: Array<{ name: string; quantity: number; variantColorName?: string }>;
   createdAt: string;
@@ -439,9 +439,11 @@ function OrderCard({ order }: { order: OrderRow }) {
   const Icon = statusMeta.icon;
 
   const shippingLabel = {
-    HOME_MVD: "Envío a domicilio",
-    AGENCY:   "Envío por agencia",
-    PICKUP:   "Retiro en domicilio",
+    HOME_MVD:      "Punto de encuentro",
+    MEETING_POINT: "Punto de encuentro",
+    HOME_DELIVERY: "Envío a domicilio",
+    AGENCY:        "Envío por agencia",
+    PICKUP:        "Retiro en domicilio",
   }[order.shippingMethod];
 
   return (

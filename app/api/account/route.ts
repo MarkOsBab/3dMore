@@ -22,6 +22,8 @@ export async function GET() {
         shippingMethod: true,
         shippingCost: true,
         shippingData: true,
+        trackingCode: true,
+        trackingCarrier: true,
         items: true,
         createdAt: true,
         updatedAt: true,

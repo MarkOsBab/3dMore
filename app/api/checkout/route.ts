@@ -7,7 +7,7 @@ const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN!,
 });
 
-type ShippingMethod = "HOME_MVD" | "AGENCY" | "PICKUP";
+type ShippingMethod = "HOME_MVD" | "MEETING_POINT" | "HOME_DELIVERY" | "AGENCY" | "PICKUP";
 
 interface CheckoutBody {
   items: Array<{
@@ -52,15 +52,16 @@ export async function POST(req: Request) {
     }
 
     // Validar shipping
-    if (!["HOME_MVD", "AGENCY", "PICKUP"].includes(shippingMethod)) {
+    if (!["HOME_MVD", "MEETING_POINT", "HOME_DELIVERY", "AGENCY", "PICKUP"].includes(shippingMethod)) {
       return NextResponse.json({ error: "Método de envío inválido" }, { status: 400 });
     }
-    if (shippingMethod === "HOME_MVD") {
+    const isMeetingOrHome = shippingMethod === "HOME_MVD" || shippingMethod === "MEETING_POINT" || shippingMethod === "HOME_DELIVERY";
+    if (isMeetingOrHome) {
       const zone = await prisma.shippingZone.findUnique({ where: { id: shippingData.zoneId ?? "" } });
       if (!zone || !zone.isActive) {
-        return NextResponse.json({ error: "Zona de envío inválida" }, { status: 400 });
+        return NextResponse.json({ error: "Zona de entrega inválida" }, { status: 400 });
       }
-      if (!shippingData.address) {
+      if (shippingMethod === "HOME_DELIVERY" && !shippingData.address) {
         return NextResponse.json({ error: "Ingresá la dirección de entrega" }, { status: 400 });
       }
     }
